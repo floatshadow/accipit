@@ -58,9 +58,9 @@ pident    ::=  '#' <ident>
 gident    ::=  '@' <ident>
 ```
 
-为了避免与保留字 (reserved word) 冲突，以及与 name 相区分，实际使用时我们通常会给 ident 加上 '%' '@' '#' 等前缀以示区分：
+为了避免与保留字 (reserved word) 冲突，实际使用时我们通常会给 ident 加上 '%' '@' '#' 等前缀以示区分：
 - `%` 前缀的标识符用于指令 (instruction) 定义的符号；
-- `#` 前缀的标识符用于函数参数列表 (paramter list) 的符号；
+- `#` 前缀的标识符用于函数参数列表 (parameter list) 的符号；
 - `@` 前缀的标识符用于全局值的符号.
 
 ```
@@ -81,13 +81,13 @@ symbol     ::= {<vident> | <pident> | <gident>} {':' <type>}?
 value      ::= <symbol> | <int_lit> | <bool_lit>
 ```
 
-符号 (symbol) 包含所有标识符们，
+符号 (symbol) 包含所有标识符，
 而 IR 中合法的值 (value) 既可以是符号所绑定的值，也可以是字面量.
 为了方便你阅读（尽管这可能显得很多余，确信），所有的标识符都有可选的类型标注.
 
 ### Types
 
-accipit IR 中的众多实体按类型区分，类型关乎到程序的合法性、执行的过程.
+Accipit IR 中的众多实体按类型区分，类型关乎到程序的合法性、执行的过程.
 
 ```
 type    ::=   'i32'
@@ -115,7 +115,7 @@ Accipit IR 的代码由一系列指令 (instruction) 组成.
 Accipit IR 的计算模型基于命令式语言的寄存器机 (register machine).
 
 ```
-valuebinding   ::= 'let' <vident>  '=' {<binexpr> | <gep> | <fncall> | <alloca> | <load> | <store>}
+valuebinding   ::= 'let' <vident> '=' {<binexpr> | <gep> | <fncall> | <alloca> | <load> | <store>}
 terminator     ::= <jmp> | <br> | <ret>
 ```
 
@@ -146,11 +146,11 @@ binexpr   ::=  <binop> <value> ',' <value>
 ### Pointer Instructions
 
 ```
-gep  ::=  vident type '=' 'offset' type uident ('[' uident '<' (int_lit | none_lit) ']')+
+gep  ::=  'offset' <type> ',' <symbol> { ',' '[' <value> '<' {<int_lit> | <none_lit>} ']' }+
 ```
 
 offset 指令的语义比较复杂，它是用于计算地址偏移量的.
-在大家比较熟悉的 C 语言中，可能涉及到高维数组、结构体等.
+在大家比较熟悉的 C 语言中，可能涉及到高维数组、结构体等等寻址比较复杂的结构，这是 offset 尝试解决的问题.
 
 出于简化考虑，accipit IR 都使用普通的指针表示，并使用若干组 size 来标记每个维度上的大小，若干组 index 来标记每个维度上的偏移量：
 offset 指令有一个类型标注，用来表明数组中元素类型；
@@ -211,11 +211,10 @@ ret 进行函数范围，并将 value 作为返回值，返回值的类型应当
 
 ```
 plist ::= separated_list({<pident> ':' <type>}, ',')
-fun   ::= 'fn' <vident> '(' <plist> ')' '->' <type? {';' | <body>}
+fun   ::= 'fn' <vident> '(' <plist> ')' '->' <type>? {';' | <body>}
 ```
 
 函数包含关键字 fn、函数标识符、参数列表、类型以及可选的函数体.
-
 如果没有函数体，则以一个分号 `;` 结尾.
 
 ```
@@ -228,26 +227,26 @@ bb    ::= <label> <instr>* <terminator>
 
 下面是一个阶乘函数的例子：
 ```
-fn factorial(#n: i32) -> i32 {
+fn %factorial(#n: i32) -> i32 {
 Lentry:
     /* Create a stack slot of i32 type as the space of the return value.
      * if n equals 1, store `1` to this address, i.e. `return 1`,
      * otherwise, do recursive call, i.e. return n * factorial(n - 1).
      */
-    %ret.addr: i32* = alloca i32, 1
-    %cmp: i1 = eq #n: i32, 0
+    let %ret.addr: i32* = alloca i32, 1
+    let %cmp: i1 = eq #n: i32, 0
     br i1 %cmp, label Lt, Lfalse
 Ltrue:
-    %6 () = store 1, %ret.addr
+    let %6: () = store 1, %ret.addr
     jmp label Lret
 Lfalse:
-    %9: i32 = sub #n: i32, 1
-    %res: i32 = call fn factorial, %9
-    %11: i32 = mul %9, %res
-    %12 () = store %11: i32, %ret.addr
+    let %9: i32 = sub #n: i32, 1
+    let %res: i32 = call fn %factorial, %9
+    let %11: i32 = mul %9, %res
+    let %12: () = store %11: i32, %ret.addr
     jmp label Lret
 Lret:
-    %ret.val: i32 = load %ret.addr: i32*
+    let %ret.val: i32 = load %ret.addr: i32*
     ret i32 %ret.val
 }
 ```
