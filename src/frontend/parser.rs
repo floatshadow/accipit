@@ -9,7 +9,7 @@ use nom::{
         multispace0, multispace1
     },
     combinator::{all_consuming, map_res, recognize, value, peek},
-    multi::{fold_many1, many0_count, many1, separated_list1}, 
+    multi::{fold_many1, many0_count, many1, separated_list0}, 
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple}, 
     Err, IResult
 };
@@ -53,37 +53,40 @@ fn parse_pointer_type(input: &str) -> IResult<&str, Type> {
 }
 
 
-fn parse_function_ty_curry_ty(input: &str) -> IResult<&str, Type> {
-    delimited(
-        multispace0,
-        alt((
-            preceded(peek(parse_pointer_type), parse_pointer_type),
-            parse_i32_type,
-            parse_i1_type,
-            preceded(peek(parse_unit_type), parse_unit_type),
-            delimited(
-            tag("("), 
-            parse_function_type,
-            tag(")")
-            ),
-        )),
-        multispace0
-    )(input)
-}
-
 fn parse_function_type(input: &str) -> IResult<&str, Type> {
-    let mut params_parser = many1(
-        terminated(
-            parse_function_ty_curry_ty,
-            tag("->")
-        )
-    );
-
-    let (input, params) = params_parser(input)?;
-    let (input, ret) = parse_function_ty_curry_ty(input)?;
+    let (input, params) = preceded(
+        tag("fn"), 
+        delimited(
+            tag("("), 
+            separated_list0(tag(","), 
+                delimited(
+                    multispace0, 
+                    parse_type, 
+                    multispace0
+                )
+            ),
+            tag(")")
+        )    
+    )(input)?;
+    let (input, ret) = preceded(
+        delimited(
+            multispace0,
+            tag("->"),
+            multispace0
+        ), 
+        parse_type
+    )(input)?;
     Ok((input, Type::get_function(params, ret)))
 }
 
+
+fn parse_type(input: &str) -> IResult<&str, Type> {
+    alt((
+        parse_pointer_type,
+        parse_base_type,
+        parse_function_type
+    ))(input)
+}
 
 fn filter_comment(input: &str) -> IResult<&str, ()> {
     alt((
@@ -133,10 +136,17 @@ fn test_ident() {
 
 #[test]
 fn test_type() {
-    assert_eq!(parse_function_type("i32 -> i32 -> ()"), 
+    assert_eq!(parse_type("i32"), Ok(("", Type::get_i32())));
+    assert_eq!(parse_type("i1"), Ok(("", Type::get_i1())));
+    assert_eq!(parse_type("()"), Ok(("", Type::get_unit())));
+    assert_eq!(parse_type("i32*"), Ok(("", Type::get_pointer(Type::get_i32()))));
+    assert_eq!(parse_type("i32**"), Ok(("", Type::get_pointer(Type::get_pointer(Type::get_i32())))));
+    assert_eq!(parse_type("fn() -> ()"), 
+            Ok(("", Type::get_function(vec![], Type::get_unit()))));
+    assert_eq!(parse_type("fn(i32, i32) -> ()"), 
             Ok(("", Type::get_function(vec![Type::get_i32(), Type::get_i32()], Type::get_unit()))));
-    assert_eq!(parse_function_type("() -> i32 -> i32*"),
+    assert_eq!(parse_type("fn((), i32) -> i32*"),
             Ok(("", Type::get_function(vec![Type::get_unit(), Type::get_i32()], Type::get_pointer(Type::get_i32())))));
-    assert_eq!(parse_function_type("(i32 -> i32) -> ()"),
+    assert_eq!(parse_type("fn(fn(i32) -> i32 ) -> ()"),
             Ok(("", Type::get_function(vec![Type::get_function(vec![Type::get_i32()], Type::get_i32())], Type::get_unit()))));
 }

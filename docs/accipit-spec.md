@@ -94,7 +94,7 @@ type    ::=   'i32'
             | 'i1'
             | '()'
             | <type> '*'
-            | {<type> '->'}+ <type>
+            | 'fn' '(' separated_list(<type>, ',') ')' '->' <type>
 ```
 
 i32，32 位带符号整数.
@@ -105,9 +105,9 @@ i1，1 位整数.
 指针类型，由被指的类型 (pointee type) 加上后缀 * 表示.
 
 函数类型，采用柯里化的写法，例如：
-- 加法 add，两个 i32 参数，一个 i32 返回值 `i32 -> i32 -> i32`
-- 读入，无参数，一个 i32 返回值 `() -> i32`
-- 输出，一个 i32 参数，无返回值 `i32 -> ()`
+- 加法 add，两个 i32 参数，一个 i32 返回值 `fn(i32, i32) -> i32`
+- 读入，无参数，一个 i32 返回值 `fn() -> i32`
+- 输出，一个 i32 参数，无返回值 `fn(i32) -> ()`
 
 ### Instructions
 
@@ -169,7 +169,7 @@ offset 指令有一个类型标注，用来表明数组中元素类型；
 #### Function Call Instructions
 
 ```
-fncall ::= 'call' 'fn' <symbol> list({',' <value>})
+fncall ::= 'call' <symbol> list({',' <value>})
 ```
 
 fncall 指令进行函数调用，符号 symbol 必须是函数类型，参数列表的中值的数量和类型应当和函数参数一致.
@@ -235,7 +235,7 @@ Lentry:
      */
     let %ret.addr: i32* = alloca i32, 1
     let %cmp: i1 = eq #n: i32, 0
-    br i1 %cmp, label Lt, Lfalse
+    br i1 %cmp, label Ltrue, Lfalse
 Ltrue:
     let %6: () = store 1, %ret.addr
     jmp label Lret
@@ -247,7 +247,7 @@ Lfalse:
     jmp label Lret
 Lret:
     let %ret.val: i32 = load %ret.addr: i32*
-    ret i32 %ret.val
+    ret %ret.val: i32
 }
 ```
 
