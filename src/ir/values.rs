@@ -1,5 +1,8 @@
 use std::fmt;
 
+use super::structures::{Value, ValueKind};
+use super::types::Type;
+
 use super::structures::{
     ValueRef, BlockRef
 };
@@ -19,7 +22,7 @@ pub enum BinaryOp {
     Sub,
     Mul,
     Div,
-    Mod,
+    Rem,
     And,
     Or,
     Xor,
@@ -44,6 +47,25 @@ pub struct ConstantInt {
     pub value: i64
 }
 
+impl ConstantInt {
+    pub fn new_value(value: i64) -> Value {
+        Value::new(Type::get_i64(), None, ValueKind::ConstantInt(Self {value}))
+    }
+
+    pub fn new_bool_value(value: i8) -> Value {
+        let inner_value = i64::from(value);
+        Value::new(Type::get_i1(), None, ValueKind::ConstantInt(Self { value: inner_value }))
+    }
+
+    pub fn new_true_value() -> Value {
+        ConstantInt::new_bool_value(1i8)
+    }
+
+    pub fn new_false_value() -> Value {
+        ConstantInt::new_bool_value(0i8)
+    }
+}
+
 /* Treat the parameters of function as `Value`.
  */
 #[derive(Debug, Clone)]
@@ -52,8 +74,20 @@ pub struct Argument;
 #[derive(Debug, Clone)]
 pub struct ConstantNullPtr;
 
+impl ConstantNullPtr {
+    pub fn new_value() -> Value {
+        Value::new(Type::get_opaque_pointer(), None, ValueKind::ConstantNullPtr(Self))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ConstantUnit;
+
+impl ConstantUnit {
+    pub fn new_value() -> Value {
+        Value::new(Type::get_unit(), None, ValueKind::ConstantUnit(Self)) 
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Offset {

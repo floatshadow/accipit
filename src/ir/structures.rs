@@ -41,6 +41,15 @@ pub struct Value {
     pub kind: ValueKind
 }
 
+impl Value {
+    pub fn new(ty: Type, name: Option<String>, kind: ValueKind) -> Value {
+        Value { ty, name, kind }
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = Some(name);
+    }
+}
 
 pub struct BasicBlock {
     pub name: Option<String>,
