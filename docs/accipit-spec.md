@@ -75,7 +75,7 @@ none_lit   ::=  'none'
 ```
 
 除了可以用上述具名或匿名的标识符来引用某个值，Accipit IR 还有常数值.
-int_lit 定义了 32 位有符号整数字面量，我们只考虑普通的十进制整数语法.
+int_lit 定义了 64 位有符号整数字面量，我们只考虑普通的十进制整数语法.
 特别地，字符串 true 或者 false 可以用于 1 bit 整数 (Boolean) 的字面量，分别指代 1 和 0.
 
 null_lit 与 none_lit 是两个特殊的符号，前者用于表示空指针常量 (null pointer)，后者用于 offset 指令.
@@ -94,14 +94,14 @@ value      ::= <symbol> | <int_lit> | <bool_lit>
 Accipit IR 中的众多实体按类型区分，类型关乎到程序的合法性、执行的过程.
 
 ```
-type    ::=   'i32'
+type    ::=   'i64'
             | 'i1'
             | '()'
             | <type> '*'
             | 'fn' '(' separated_list(<type>, ',') ')' '->' <type>
 ```
 
-i32，32 位带符号整数.
+i64，64 位带符号整数.
 i1，1 位整数.
 
 单值类型 ()，读作 unit，可以理解为空类型 void.
@@ -109,9 +109,9 @@ i1，1 位整数.
 指针类型，由被指的类型 (pointee type) 加上后缀 * 表示.
 
 函数类型，类似于函数声明，例如：
-- 加法 add，两个 i32 参数，一个 i32 返回值 `fn(i32, i32) -> i32`
-- 读入，无参数，一个 i32 返回值 `fn() -> i32`
-- 输出，一个 i32 参数，无返回值 `fn(i32) -> ()`
+- 加法 add，两个 i64 参数，一个 i64 返回值 `fn(i64, i64) -> i64`
+- 读入，无参数，一个 i64 返回值 `fn() -> i64`
+- 输出，一个 i64 参数，无返回值 `fn(i64) -> ()`
 
 ### Instructions
 
@@ -130,8 +130,8 @@ terminator     ::= <jmp> | <br> | <ret>
 
 
 出于其中间代码的地位考虑，我们仍然保留了一部分类型信息.
-例如加法指令 `let %res:i32 = add %0: i32, %1: i32`.
-可能有某些值是空类型，`let %no.result: () = store 1, %addr: i32*`.
+例如加法指令 `let %res:i64 = add %0: i64, %1: i64`.
+可能有某些值是空类型，`let %no.result: () = store 1, %addr: i64*`.
 
 #### Numeric Instructions
 
@@ -143,12 +143,12 @@ binexpr   ::=  <binop> <value> ',' <value>
 ```
 
 数值计算指令操作符中不包含单目运算符，例如 lnot (logic not) 和 neg (numeric negation)，因为他们是多余的：
-- 按位取反，`not %src: i32` 等价于 `xor %src: i32, -1`.
+- 按位取反，`not %src: i64` 等价于 `xor %src: i64, -1`.
 - 逻辑取反，`lnot %src: i8` 等价于 `eq %src: i8, false`.
-- 取负数，`neg %src: i32` 等价于 `sub 0, %src: i32`.
+- 取负数，`neg %src: i64` 等价于 `sub 0, %src: i64`.
 这种转换很容易在前端生成中间代码时实现，并且使得这些计算有一个统一的表示形式 (canonical form)，这将有利于后端代码生成.
 
-### Pointer Instructions
+#### Pointer Instructions
 
 ```
 gep  ::=  'offset' <type> ',' <symbol> { ',' '[' <value> '<' {<int_lit> | <none_lit>} ']' }+
@@ -162,10 +162,10 @@ offset 指令有一个类型标注，用来表明数组中元素类型；
 一共有 `2n + 1` 个参数，其中第一个参数是一个指针，表示基地址；
 后 `2n` 个参数每两个一组， 每一组的形式为 `[index < size]` 其中 index 表示该维度上的偏移量，size 表示该维度的大小.
 
-例如 C 语言中声明数组 `int g[3][2][5]`，访问元素 `g[x][y][z]` 时，对应的 offset 指令为 `offset i32, %g.addr: i32*, [x < 3], [y < 2], [z < 5]`.
+例如 C 语言中声明数组 `int g[3][2][5]`，访问元素 `g[x][y][z]` 时，对应的 offset 指令为 `offset i64, %g.addr: i64*, [x < 3], [y < 2], [z < 5]`.
 当然，可能会出现高位数组有一维不知道大小或者单个指针偏移的情况，在这种情况下，对应的维度使用 none 标记：
-- 二维数组 `int g[][5]` 访问 `g[x][y]`，`offset i32, %g.addr: i32*, [x < none], [y < 5]`.
-- 单个指针 `int *p` 访问 `p + 10`，`offset i32, %g.addr: i32*, [10 < none]`.
+- 二维数组 `int g[][5]` 访问 `g[x][y]`，`offset i64, %g.addr: i64*, [x < none], [y < 5]`.
+- 单个指针 `int *p` 访问 `p + 10`，`offset i64, %g.addr: i64*, [10 < none]`.
 
 为什么要有 size 这个参数作为一个下标的上界？
 为了你方便处理，我们在类型中舍弃了高维数组，数组类型在后端代码生成时处理相对比较麻烦，但是在前端处理这些信息相对容易.
@@ -188,7 +188,7 @@ store  ::= 'store' <value> ',' <symbol>
 ```
 
 alloca 指令的作用是为局部变量开辟栈空间，并获得一个指向 type 类型，长度为 int_lit 的指针.
-C 代码 `int *a = (int *)malloc(100 * sizeof(int))` 对应 `let %a: i32* = alloc i32, 100`.
+C 代码 `int *a = (int *)malloc(100 * sizeof(int))` 对应 `let %a: i64* = alloc i64, 100`.
 
 load 指令接受一个指针类型 T* 的符号，返回一个 T 类型的值.
 
@@ -232,27 +232,27 @@ bb    ::= <label> <instr>* <terminator>
 
 下面是一个阶乘函数的例子：
 ```
-fn %factorial(#n: i32) -> i32 {
+fn %factorial(#n: i64) -> i64 {
 Lentry:
-    /* Create a stack slot of i32 type as the space of the return value.
+    /* Create a stack slot of i64 type as the space of the return value.
      * if n equals 1, store `1` to this address, i.e. `return 1`,
      * otherwise, do recursive call, i.e. return n * factorial(n - 1).
      */
-    let %ret.addr: i32* = alloca i32, 1
-    let %cmp: i1 = eq #n: i32, 0
+    let %ret.addr: i64* = alloca i64, 1
+    let %cmp: i1 = eq #n: i64, 0
     br i1 %cmp, label Ltrue, Lfalse
 Ltrue:
     let %6: () = store 1, %ret.addr
     jmp label Lret
 Lfalse:
-    let %9: i32 = sub #n: i32, 1
-    let %res: i32 = call fn %factorial, %9
-    let %11: i32 = mul %9, %res
-    let %12: () = store %11: i32, %ret.addr
+    let %9: i64 = sub #n: i64, 1
+    let %res: i64 = call fn %factorial, %9
+    let %11: i64 = mul %9, %res
+    let %12: () = store %11: i64, %ret.addr
     jmp label Lret
 Lret:
-    let %ret.val: i32 = load %ret.addr: i32*
-    ret %ret.val: i32
+    let %ret.val: i64 = load %ret.addr: i64*
+    ret %ret.val: i64
 }
 ```
 

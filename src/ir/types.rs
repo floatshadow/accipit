@@ -3,12 +3,11 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeKind {
-    Int32,
+    Int64,
     Int1,
     Unit,
     Pointer(Type),
@@ -31,7 +30,7 @@ impl Deref for Type {
 impl fmt::Display for TypeKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TypeKind::Int32 => write!(f, "i32"),
+            TypeKind::Int64 => write!(f, "i64"),
             TypeKind::Int1 => write!(f, "i1"),
             TypeKind::Unit => write!(f, "()"),
             TypeKind::Pointer(base_type) => write!(f, "*{}", base_type),
@@ -68,8 +67,8 @@ impl Type {
         })
     }
 
-    pub fn get_i32() -> Type {
-        Type::get(TypeKind::Int32)
+    pub fn get_i64() -> Type {
+        Type::get(TypeKind::Int64)
     }
 
     pub fn get_i1() -> Type {
@@ -93,7 +92,7 @@ impl Type {
     }
 
     pub fn is_integer_type(&self) -> bool {
-        matches!(self.0.as_ref(), TypeKind::Int32 | TypeKind::Int1)
+        matches!(self.0.as_ref(), TypeKind::Int64 | TypeKind::Int1)
     }
 
     pub fn is_unit_type(&self) -> bool {
