@@ -11,6 +11,7 @@ Accipit IR 的语法和结构由抽象语法定义.
 ### Grammar Notations
 
 以下记号会在定义抽象语法的语法规则时用到：
+
 - 产生式写作 `sym ::= expr1 | expr2 | ... | exprn`，其中 expr 是任意合法的语法表达式.
 - 引用其他产生式使用尖括号包裹的该产生式对应的符号，例如 `<sym>`.
 - 空字符串使用 `<empty>` 标记.
@@ -24,6 +25,7 @@ Accipit IR 的语法和结构由抽象语法定义.
 -  `expr1 expr2` 表示两个字符串的拼接，第一个符合 expr1，第二个符合 expr2
 
 以及一些高级的函数，他们不难使用上面的表达式定义：
+
 - `list(expr)` 表示 0 个或者多个符合 expr 的字符串拼接
 - `nonempty_list(expr)` 表示 1 个或者多个符合 expr 的字符串拼接
 - `separated_list(expr, character)` 表示 0 个或者多个符合 expr 的字符串，其间以字符 character 分隔. 例如符合 `separected_list(expr, ',')` 的字符串有： `<empty>`，`expr`，`expr,expr,expr`.
@@ -49,6 +51,7 @@ letter 定义了字母数字集合，简单起见只包含拉丁字母.
 
 ident 定义了标识符 (identifier) 集合，你可以理解为 Accipit IR 内部所使用各种不同结构，值的名字.
 具体来说有两种命名习惯：
+
 - 带有名称的值，命名习惯与 name 类似，但是允许含有 '.' '-' 等符号，例如 `%foo` `@DivisionByZero` ` %a.really.long.identifier`.
 - 匿名的值，这类值通常用于表示编译器生成的临时变量，通常按出现的顺序使用一个非负整数命名，例如 `%12` `@2` `%0`.
 
@@ -59,6 +62,7 @@ gident    ::=  '@' <ident>
 ```
 
 为了避免与保留字 (reserved word) 冲突，实际使用时我们通常会给 ident 加上 '%' '@' '#' 等前缀以示区分：
+
 - `%` 前缀的标识符用于指令 (instruction) 定义的符号；
 - `#` 前缀的标识符用于函数参数列表 (parameter list) 的符号；
 - `@` 前缀的标识符用于全局值的符号.
@@ -104,7 +108,7 @@ i1，1 位整数.
 
 指针类型，由被指的类型 (pointee type) 加上后缀 * 表示.
 
-函数类型，采用柯里化的写法，例如：
+函数类型，类似于函数声明，例如：
 - 加法 add，两个 i32 参数，一个 i32 返回值 `fn(i32, i32) -> i32`
 - 读入，无参数，一个 i32 返回值 `fn() -> i32`
 - 输出，一个 i32 参数，无返回值 `fn(i32) -> ()`
@@ -120,6 +124,7 @@ terminator     ::= <jmp> | <br> | <ret>
 ```
 
 所有的指令具有两种形式：
+
 - value binding，即将标识符绑定在某个值上.
 - terminator，不进行任何绑定，标记基本块的终结，对应控制流的跳转.
 
@@ -265,6 +270,7 @@ TBD
 # Acknowledgement
 
 IR 的设计参考了以下课程与资料：
+
 - [北京大学编译原理课程](https://pku-minic.github.io/online-doc/#/) 的 Koopa IR.
 - [LLVM 项目](https://llvm.org/docs/LangRef.html) 的 IR 设计.
 - [SyOC](https://github.com/waterlens/syoc) 的 IR 设计，感谢 @杨汝清 学长的热心帮助.

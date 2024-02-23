@@ -1,0 +1,67 @@
+site_name: 浙江大学编译原理课程实验
+#site_url: https://floatshadow.github.io/compiler24/
+repo_url: https://github.com/floatshaodw/accipit
+repo_name: floatshadow/accipit
+theme:
+  name: 'material'
+  language: 'zh'
+  features:
+    - content.code.annotate
+    # - content.action.edit
+    - navigation.tracking
+    - navigation.top
+    # - navigation.tabs
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+  font:
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+nav:
+  - Accipit IR 规范: accipit-spec.md
+
+
+
+extra_javascript:
+  - javascripts/katex.js
+
+markdown_extensions:
+  - toc:
+      permalink: true
+      toc_depth: 4
+  - meta
+  - def_list
+  - attr_list
+  - md_in_html
+  - sane_lists
+  - admonition
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.snippets
+  - pymdownx.magiclink
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.arithmatex:
+      generic: true

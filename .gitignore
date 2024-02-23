@@ -1,3 +1,6 @@
+# MkDocs build directory
+site/
+
 # Editor configs
 .idea/
 .vscode/
