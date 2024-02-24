@@ -42,6 +42,12 @@ pub struct Binary {
     pub rhs: ValueRef
 }
 
+impl Binary {
+    pub fn new(ty: Type, op: BinaryOp, lhs: ValueRef, rhs: ValueRef) -> Value {
+        Value::new(ty, None, ValueKind::Binary(Self {op, lhs, rhs}))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ConstantInt {
     pub value: i64
@@ -69,7 +75,19 @@ impl ConstantInt {
 /* Treat the parameters of function as `Value`.
  */
 #[derive(Debug, Clone)]
-pub struct Argument;
+pub struct Argument {
+    pub index: usize
+}
+
+impl Argument {
+    pub fn new_value(index: usize, ty: Type) -> Value {
+        Value::new(ty, None, ValueKind::Argument(Self {index}))
+    }
+
+    pub fn new_value_with_name(index: usize, ty: Type, name: Option<String>) -> Value {
+        Value::new(ty, name, ValueKind::Argument(Self { index }))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ConstantNullPtr;
