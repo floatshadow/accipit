@@ -52,6 +52,12 @@ impl Value {
     pub fn set_name(&mut self, name: String) {
         self.name = Some(name);
     }
+
+    pub fn isa_instruction(&self) -> bool {
+        matches!(self.kind, 
+                ValueKind::Binary(..) | ValueKind::Offset(..) | ValueKind::FnCall(..) | 
+                ValueKind::Alloca(..) | ValueKind::Load(..) | ValueKind::Store(..))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +94,7 @@ pub struct Function {
     pub ty: Type,
     pub name: String,
     pub args: Vec<ValueRef>,
+    pub is_external: bool,
 
     pub blocks: Vec<BlockRef>,
     pub blocks_ctx: SlotMap<BlockRef, BasicBlock>,
@@ -111,5 +118,13 @@ impl Module {
             func_ctx: HashMap::new(),
             globals: Vec::new()
         }
+    }
+
+    pub fn get_value(&self, value_ref: ValueRef) -> Value {
+        self.value_ctx.get(value_ref).unwrap().clone()
+    }
+
+    pub fn get_value_type(&self, value_ref: ValueRef) -> Type {
+        self.value_ctx.get(value_ref).unwrap().ty.clone()
     }
 }

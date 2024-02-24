@@ -34,7 +34,7 @@ impl<'a> FunctionEmitState<'a> {
 
 
 pub struct IRBuilder<'a> {
-    module: Module,
+    pub module: Module,
     func: Option<FunctionEmitState<'a>>,
 
     /* global variables */
@@ -49,6 +49,70 @@ impl<'a> IRBuilder<'a> {
             func: None,
             global_string_value_map: HashMap::new(),
         }
+    }
+
+    fn get_unique_name(&mut self, base: &Option<String>) -> String {
+        let namer = &mut self.func.
+            as_mut().
+            unwrap().
+            namer;
+        match base.as_ref() {
+            Some(given_name) => namer. next_name(&given_name),
+            None => namer.next_anonymous_name()
+        }
+    }
+
+    fn get_value_ref(&self, name: String) -> ValueRef {
+        self.func
+            .as_ref()
+            .unwrap()
+            .local_string_value_map
+            .get(&name)
+            .unwrap()
+            .clone()
+    }
+
+    fn get_block_ref(&self, name: String) -> BlockRef {
+        self.func
+            .as_ref()
+            .unwrap()
+            .local_string_bb_map
+            .get(&name)
+            .unwrap()
+            .clone()
+    }
+
+    /* This function is only for create a phantom basic block,
+     * which is used as the destinations of terminator.
+     * The actual basic block will be parsed later and fixup.
+     */
+    pub fn get_or_insert_block(&mut self, name: String) -> BlockRef {
+        let possible_bb = self.func
+            .as_ref()
+            .unwrap()
+            .local_string_bb_map
+            .get(&name);
+        match possible_bb {
+            Some(bb_ref) => bb_ref.clone(),
+            None => {
+                let mut phantom_bb = BasicBlock::new();
+                phantom_bb.set_name(Some(name));
+                self.insert_basic_block_symbol(phantom_bb)
+            }
+        }
+
+    }
+
+    fn insert_instruction(&mut self, value_ref: ValueRef) {
+        let state = self.func
+            .as_mut()
+            .unwrap();
+        let working_bb = state.position.unwrap();
+        state.current_function.blocks_ctx
+            .get_mut(working_bb)
+            .unwrap()
+            .instrs
+            .push(value_ref);
     }
 
     /* get the handler of value and update local symbol value map  */
@@ -106,7 +170,8 @@ impl<'a> IRBuilder<'a> {
     pub fn emit_function(&'a mut self, 
         name: String, 
         params_ty: Vec<(Option<String>, Type)>, 
-        ret_ty: Type
+        ret_ty: Type,
+        is_external: bool
     )  {
         let (params, params_ty): (Vec<Value>, Vec<Type>) = params_ty
             .into_iter()
@@ -142,6 +207,7 @@ impl<'a> IRBuilder<'a> {
             ty: func_ty,
             name,
             args: args_value_ref,
+            is_external,
             blocks: Vec::new(),
             blocks_ctx: SlotMap::with_key()
         };
@@ -172,13 +238,104 @@ impl<'a> IRBuilder<'a> {
     }
 
     /* create an empty basic block */
-    pub fn emit_basic_block(&mut self) {
+    pub fn emit_basic_block(&mut self, name: Option<String>) -> BlockRef {
         let state = self.func
             .as_mut()
             .expect("builder has no working function");
-        let new_bb = BasicBlock::new();
+        let mut new_bb = BasicBlock::new();
+        new_bb.set_name(name);
         let new_bb_ref = state.current_function.blocks_ctx.insert(new_bb);
         state.current_function.blocks.push(new_bb_ref);
+        new_bb_ref
     }
 
+    pub fn emit_numeric_binary_expr(
+        &mut self,
+        op: values::BinaryOp,
+        name: Option<String>,
+        lhs: ValueRef, 
+        rhs: ValueRef, 
+        annotated_type: Option<Type>
+    ) -> ValueRef {
+        let lhs_ty = self.module.get_value_type(lhs);
+        let rhs_ty = self.module.get_value_type(rhs);
+        let inner_name = self.get_unique_name(&name);
+        assert!(
+            lhs_ty.is_integer_type() && lhs_ty.eq(&rhs_ty),
+            "`lhs` and `rhs` should be the same integer type for {}",
+            inner_name
+        );
+        let result_ty = match annotated_type {
+            Some(check_ty) => {
+                assert!(
+                    lhs_ty.eq(&check_ty),
+                    "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                    lhs_ty, inner_name, check_ty
+                );
+                match op {
+                    values::BinaryOp::Add | values::BinaryOp::Sub |
+                    values::BinaryOp::Mul | values::BinaryOp::Div | values::BinaryOp::Rem |
+                    values::BinaryOp::And | values::BinaryOp::Or | values::BinaryOp::Xor =>
+                        lhs_ty,
+                    values::BinaryOp::Lt | values::BinaryOp::Gt |
+                    values::BinaryOp::Le | values::BinaryOp::Ge |
+                    values::BinaryOp::Eq | values::BinaryOp::Ne =>
+                        Type::get_i1()
+                }
+            },
+            None => lhs_ty
+        };
+
+        let handler = self.insert_local_symbol(values::Binary::new(result_ty, op, lhs, rhs));
+        self.insert_instruction(handler);
+        handler
+
+    }
+
+    pub fn fixup_terminator_jump(&mut self, dest: BlockRef) {
+        let state = self.func
+            .as_mut()
+            .unwrap();
+        let working_bb = state.position.unwrap();
+        state.current_function.blocks_ctx
+            .get_mut(working_bb)
+            .unwrap()
+            .set_terminator(
+                values::Jump::new_value(dest)
+            )
+    }
+
+    pub fn fixup_terminator_branch(
+        &mut self, 
+        cond: ValueRef,
+        true_label: BlockRef,
+        false_label: BlockRef
+    ) {
+        let state = self.func
+            .as_mut()
+            .unwrap();
+        let working_bb = state.position.unwrap();
+        state.current_function.blocks_ctx
+            .get_mut(working_bb)
+            .unwrap()
+            .set_terminator(
+                values::Branch::new_value(cond, true_label, false_label)
+            )
+    }
+
+    pub fn fixup_terminator_return(
+        &mut self, 
+        return_value: ValueRef
+    ) {
+        let state = self.func
+            .as_mut()
+            .unwrap();
+        let working_bb = state.position.unwrap();
+        state.current_function.blocks_ctx
+            .get_mut(working_bb)
+            .unwrap()
+            .set_terminator(
+                values::Return::new_value(return_value)
+            )
+    }
 }

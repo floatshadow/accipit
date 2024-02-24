@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::structures::{Value, ValueKind};
+use super::structures::{Terminator, Value, ValueKind};
 use super::types::Type;
 
 use super::structures::{
@@ -33,6 +33,27 @@ pub enum BinaryOp {
     Ge,
     Eq,
     Ne,
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BinaryOp::Add => write!(f, "add"),
+            BinaryOp::Sub => write!(f, "sub"),
+            BinaryOp::Mul => write!(f, "mul"),
+            BinaryOp::Div => write!(f, "div"),
+            BinaryOp::Rem => write!(f, "rem"),
+            BinaryOp::And => write!(f, "or"),
+            BinaryOp::Or => write!(f, "and"),
+            BinaryOp::Xor => write!(f, "xor"),
+            BinaryOp::Lt => write!(f, "lt"),
+            BinaryOp::Gt => write!(f, "gt"),
+            BinaryOp::Le => write!(f, "le"),
+            BinaryOp::Ge => write!(f, "ge"),
+            BinaryOp::Eq => write!(f, "eq"),
+            BinaryOp::Ne => write!(f, "ne")
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -144,6 +165,12 @@ pub struct Jump {
     pub dest: BlockRef
 }
 
+impl Jump {
+    pub fn new_value(dest: BlockRef) -> Terminator {
+        Terminator::Jump(Self { dest })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Branch {
     pub cond: ValueRef,
@@ -151,7 +178,23 @@ pub struct Branch {
     pub false_label: BlockRef,
 }
 
+impl Branch {
+    pub fn new_value(
+        cond: ValueRef,
+        true_label: BlockRef,
+        false_label: BlockRef
+    ) -> Terminator {
+        Terminator::Branch(Self { cond, true_label, false_label})
+    } 
+}
+
 #[derive(Debug, Clone)]
 pub struct Return {
     pub value: ValueRef
+}
+
+impl Return {
+    pub fn new_value(value: ValueRef) -> Terminator {
+        Terminator::Return(Self { value })
+    }
 }
