@@ -190,6 +190,12 @@ mod test {
         test_parser!(parse_type, "fn(fn(i64) -> i64 ) -> ()",
                 Type::get_function(vec![Type::get_function(vec![Type::get_i64()], Type::get_i64())], Type::get_unit()));
     }
+
+    #[test]
+    fn test_filter_comment() {
+        test_parser!(parse_type, "fn((), // EOL-style comment \n  i64) -> /* C++ style comment \n * newline */ i64*",
+                Type::get_function(vec![Type::get_unit(), Type::get_i64()], Type::get_pointer(Type::get_i64())));
+    }
 }
 
 
