@@ -227,7 +227,7 @@ fun   ::= 'fn' <vident> '(' <plist> ')' '->' <type>? {';' | <body>}
 
 ```
 body  ::= '{' <bb>+ '}'
-label ::= <ident> ':'
+label ::= <symbol> ':'
 bb    ::= <label> <instr>* <terminator>
 ```
 
@@ -236,24 +236,24 @@ bb    ::= <label> <instr>* <terminator>
 下面是一个阶乘函数的例子：
 ```
 fn %factorial(#n: i64) -> i64 {
-Lentry:
+%Lentry:
     /* Create a stack slot of i64 type as the space of the return value.
      * if n equals 1, store `1` to this address, i.e. `return 1`,
      * otherwise, do recursive call, i.e. return n * factorial(n - 1).
      */
     let %ret.addr: i64* = alloca i64, 1
     let %cmp: i1 = eq #n: i64, 0
-    br i1 %cmp, label Ltrue, Lfalse
-Ltrue:
+    br i1 %cmp, label %Ltrue, label %Lfalse
+%Ltrue:
     let %6: () = store 1, %ret.addr
-    jmp label Lret
-Lfalse:
+    jmp label %Lret
+%Lfalse:
     let %9: i64 = sub #n: i64, 1
     let %res: i64 = call fn %factorial, %9
     let %11: i64 = mul %9, %res
     let %12: () = store %11: i64, %ret.addr
-    jmp label Lret
-Lret:
+    jmp label %Lret
+%Lret:
     let %ret.val: i64 = load %ret.addr: i64*
     ret %ret.val: i64
 }

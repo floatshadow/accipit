@@ -1,0 +1,19 @@
+fn %add(#1: i64, #2: i64) -> i64 {
+%3:
+    let %4: i64 = add #1, #2
+    ret %4
+}
+
+fn %add_plus_one(#1: i64, #2: i64) -> i64 {
+%3:
+    let %4: i64 = add #1, #2
+    let %5: i64 = add #4, 1
+    ret %5
+}
+
+fn %add_ret_unit(#1: i64, #2: i64) -> () {
+%3:
+    let %4: i64 = add #1, #2
+    let %5: i64 = add #4, 1
+    ret ()
+}

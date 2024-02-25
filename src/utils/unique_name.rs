@@ -19,7 +19,7 @@ impl UniqueName {
             format!("{}.{}", base, n)
         } else {
             self.history.insert(base.to_string(), 0);
-            format!("{}.0", base)
+            format!("{}", base)
         }
     }
 

@@ -174,27 +174,6 @@ fn lex_identifier(input: &str) -> IResult<&str, Token> {
     Ok((input, Token::TkIdent(slice)))
 }
 
-fn lex_label(input: &str) -> IResult<&str, Token> {
-    let (input, _) = filter_whitespace_and_comment(input)?;
-    let (input, slice) = terminated(
-        alt((
-            /* named identifier */
-            recognize(
-                pair(
-                    alt((alpha1, tag("_"), tag("."), tag("-"))),
-                    many0_count(alt((alphanumeric1, tag("_"), tag("."), tag("-"))))
-                )
-            ),
-            /* anonymous identifer */
-            recognize(
-                digit1
-            )
-        )),
-        tag(":")
-    )(input)?;
-    Ok((input, Token::TkLabel(slice)))
-}
-
 fn lex_primitive_type(input: &str) -> IResult<&str, Token> {
     preceded(filter_whitespace_and_comment, alt((
         value(Token::TyInt64,tag("i64")),
@@ -214,9 +193,10 @@ impl Lexer {
 
     pub fn lex(input: &str) -> IResult<&str, Vec<Token>> {
         many0(alt((
+            // `let` `le` has name collision.
+            lex_keyword,
             lex_literal,
             lex_identifier,
-            lex_label,
             lex_primitive_type,
             lex_delimiter,
             lex_binary_operator,
@@ -224,7 +204,6 @@ impl Lexer {
             lex_memory_operator,
             lex_function_cal_operator,
             lex_terminator_operator,
-            lex_keyword
         )))(input)
     }
 }

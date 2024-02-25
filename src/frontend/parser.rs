@@ -13,7 +13,7 @@ use crate::ir::{
     builders::IRBuilder, structures::*, types::Type, values
 };
 
-use super::lexer::Lexer;
+use super::{lexer::Lexer, token};
 use super::token::{Token, Tokens};
 
 
@@ -40,15 +40,10 @@ where
 fn identifier(input: Tokens) -> IResult<Tokens, &str> {
     let (input, tk) = take(1usize)(input)?;
     match tk.iter_elements().next().unwrap() {
-        Token::TkIdent(id) => Ok((input, id)),
-        _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
-    }
-}
-
-fn label(input: Tokens) -> IResult<Tokens, &str> {
-    let (input, tk) = take(1usize)(input)?;
-    match tk.iter_elements().next().unwrap() {
-        Token::TkLabel(id) => Ok((input, id)),
+        Token::TkIdent(id) => { 
+            // println!("identifier {}, now token: {:?}", id, input);
+            Ok((input, id))
+        },
         _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
     }
 }
@@ -69,7 +64,14 @@ fn i1_literal(input: Tokens) -> IResult<Tokens, i8> {
     }
 }
 
-
+fn parse_literal(input: Tokens) -> IResult<Tokens, Value> {
+    alt((
+        map(i64_literal, values::ConstantInt::new_value),
+        map(i1_literal, values::ConstantInt::new_bool_value),
+        value(values::ConstantUnit::new_value(),
+            pair(token(Token::LParen), token(Token::RParen)))
+    ))(input)
+}
 
 
 fn parse_base_type(input: Tokens) -> IResult<Tokens, Type> {
@@ -121,21 +123,6 @@ fn parse_type(input: Tokens) -> IResult<Tokens, Type> {
     ))(input)
 }
 
-fn parse_ident(input: &str) -> IResult<&str, &str> {
-    alt((
-        /* named identifier */
-        recognize(
-            pair(
-                alt((alpha1, tag("_"), tag("."), tag("-"))),
-                many0_count(alt((alphanumeric1, tag("_"), tag("."), tag("-"))))
-            )
-        ),
-        /* anonymous identifer */
-        recognize(
-            digit1
-        )
-    ))(input)
-}
 
 fn parse_symbol(input: Tokens) -> IResult<Tokens, (&str, Option<Type>)> {
     pair(
@@ -171,25 +158,40 @@ impl<'a, 'b: 'a> Parser {
         Parser { }
     }
 
+    fn parse_value(
+        input: Tokens<'a>,
+        builder: Rc<RefCell<IRBuilder>>
+    ) -> IResult<Tokens<'a>, ValueRef> {
+        alt((
+            map(parse_symbol, | (name, _) | {
+                builder.borrow().get_value_ref(name)
+            }),
+            map(parse_literal,  | value: Value| {
+                builder.borrow_mut().insert_value_inner(value)
+            })
+        ))(input)
+    }
+
     fn parse_binary_expr(
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>
     ) -> IResult<Tokens<'a>, ValueRef> {
         let (input,(name, anno_ty)) =
             delimited(token(Token::KwLet), parse_symbol, token(Token::Equal))(input)?;
-        let (input, (op, ((lhs, _), (rhs, _)))) = tuple((
+        let (input, (op, (lhs, rhs))) = tuple((
             parse_binop,
-            separated_pair(parse_symbol, token(Token::Comma), parse_symbol)
+            separated_pair(
+                | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
+                token(Token::Comma),
+                | token: Tokens<'a> | Parser::parse_value(token, builder.clone())
+            )
         ))(input)?;
-
-        let lhs_ref = builder.borrow().get_value_ref(lhs);
-        let rhs_ref = builder.borrow().get_value_ref(rhs);
 
         Ok((input, builder.borrow_mut().emit_numeric_binary_expr(
             op,
             Some(String::from(name)),
-            lhs_ref,
-            rhs_ref,
+            lhs,
+            rhs,
             anno_ty
         )))
     }
@@ -220,10 +222,10 @@ impl<'a, 'b: 'a> Parser {
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>
     ) -> IResult<Tokens<'a>, ()> {
-        let (input, ((cond, _), (true_label, false_label))) = preceded(
+        let (input, (cond, (true_label, false_label))) = preceded(
             token(Token::TKBranch),
             tuple((
-                parse_symbol,
+                | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
                 separated_pair(
                     preceded(token(Token::KwLabel),   identifier),
                     token(Token::Comma),
@@ -231,10 +233,9 @@ impl<'a, 'b: 'a> Parser {
                 )
             ))
         )(input)?;
-        let cond_ref = builder.borrow().get_value_ref(cond);
         let true_ref = builder.borrow().get_block_ref(true_label);
         let false_ref = builder.borrow().get_block_ref(false_label);
-        builder.borrow_mut().fixup_terminator_branch(cond_ref, true_ref, false_ref);
+        builder.borrow_mut().fixup_terminator_branch(cond, true_ref, false_ref);
         Ok((input, ()))
     }
 
@@ -242,13 +243,15 @@ impl<'a, 'b: 'a> Parser {
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>
     ) -> IResult<Tokens<'a>, ()> {
-        let (input, (ret, _)) = preceded(token(Token::TKRet), parse_symbol)(input)?;
-        let ret_ref = builder
-            .borrow()
-            .get_value_ref(ret);
+        // println!("find return");
+        let (input, ret) = preceded(
+            token(Token::TKRet),
+            | token: Tokens<'a> | Parser::parse_value(token, builder.clone())
+        )(input)?;
+        // println!("build return");
         builder
             .borrow_mut()
-            .fixup_terminator_return(ret_ref);
+            .fixup_terminator_return(ret);
         Ok((input, ()))
     }
 
@@ -267,19 +270,21 @@ impl<'a, 'b: 'a> Parser {
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>
     ) -> IResult<Tokens<'a>, BlockRef> {
-        let (input, label) = label(input)?;
+        let (input, label) = terminated(identifier, token(Token::Colon))(input)?;
         let handler = builder
             .borrow_mut()
             .emit_basic_block(Some(String::from(label)));
         builder
             .borrow_mut()
             .set_insert_point(handler);
-        
+        // println!("build basic block");
         // parse instructions
         let (input, _) = many0_count(
             | input: Tokens<'a> | Parser::parse_instruction(input, builder.clone()))(input)?;
         // fixup terminator
+        // println!("build terminator start");
         let (input, _) = Parser::parse_terminator(input, builder.clone())?;
+        // println!("build terminator finish");
         Ok((input, handler))
     }
 
@@ -287,9 +292,10 @@ impl<'a, 'b: 'a> Parser {
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>
     ) -> IResult<Tokens<'a>, ()> {
-        let (input, bb_list) = many1(
-            | input: Tokens<'a> | Parser::parse_basic_block(input, builder.clone()))(input)?;
-        Ok((input, ()))
+        value((), 
+            many1_count(
+            | input: Tokens<'a> | Parser::parse_basic_block(input, builder.clone()))
+        )(input)
     }
 
     fn parse_function_header(
@@ -302,7 +308,7 @@ impl<'a, 'b: 'a> Parser {
             delimited(
                 token(Token::LParen),
                 separated_list0(
-                    token(Token::Colon),
+                    token(Token::Comma),
                     pair(
                         map(identifier, | name | Some(String::from(name))),
                         preceded(token(Token::Colon), parse_type))
@@ -328,9 +334,14 @@ impl<'a, 'b: 'a> Parser {
         builder
             .borrow_mut()
             .emit_function(name, params, ret, external);
+        // println!("build function body");
         alt((
             value((), token(Token::SemiColon)),
-            | input: Tokens<'a> | Parser::parse_function_body(input, builder.clone())
+            delimited(
+                token(Token::LBrace),
+                | input: Tokens<'a> | Parser::parse_function_body(input, builder.clone()),
+                token(Token::RBrace)
+            )
         ))(input)
     }
 
@@ -340,7 +351,7 @@ impl<'a, 'b: 'a> Parser {
     ) -> IResult<Tokens<'a>, Module> {
         let (input, _) = many0(
             | input: Tokens<'a> | Parser::parse_function(input, builder.clone())
-        )(input).unwrap();
+        )(input)?;
         Ok((input, builder.borrow().module.clone()))
     }
 }
@@ -349,17 +360,20 @@ impl<'a, 'b: 'a> Parser {
 
 #[cfg(test)]
 mod test {
+    use crate::frontend::parser;
+    use crate::ir::builders;
+
     use super::*;
     use super::super::lexer::Lexer;
 
 
     macro_rules! test_parser {
-        ($parser: ident, $input: expr, $result: expr) => {
+        ($parser: ident, $input: expr, $result: expr) => {{
             let (res_input, tokens) = Lexer::lex($input).unwrap();
             assert!(res_input.is_empty(), "lexer leaves out unlexed tokens");
             let (_, output) = $parser(Tokens::new(&tokens)).unwrap();
-            assert_eq!(output, $result);          
-        };
+            assert_eq!(output, $result);
+        }};
     }
 
     #[test]
@@ -394,6 +408,20 @@ mod test {
         test_parser!(parse_type, "fn((), // EOL-style comment \n  i64) -> /* C++ style comment \n * newline */ i64*",
                 Type::get_function(vec![Type::get_unit(), Type::get_i64()], Type::get_pointer(Type::get_i64())));
     }
+
+    #[test]
+    fn test_function_header() {
+        let parser = Parser::parse_function_header;
+        test_parser!( parser,
+            "fn %add(#1: i64, #2: i64) -> i64;",
+            (String::from("add"), 
+            vec![(Some(String::from("1")), Type::get_i64()), (Some(String::from("2")), Type::get_i64())],
+            Type::get_i64(),
+            true
+            )
+        )
+    }
+
 }
 
 

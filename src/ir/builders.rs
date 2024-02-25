@@ -121,15 +121,17 @@ impl IRBuilder {
 
     /* get the handler of value and update local symbol value map  */
     fn insert_local_symbol(&mut self, value: Value) -> ValueRef {
+        // println!("insert {}", value.name.as_ref().unwrap());
         let handler = self.insert_value_inner(value.clone());
         match value.name {
-            Some(name) =>
+            Some(name) => {
                 self.func
                     .as_mut()
                     .expect("builder has no working function")
                     .local_string_value_map
-                    .insert(name, handler)
-                    .expect("local symbol duplicated name"),
+                    .insert(name, handler);
+                handler
+            }
             None => handler
         }
     }
@@ -137,24 +139,25 @@ impl IRBuilder {
     fn insert_basic_block_symbol(&mut self, bb: BasicBlock) -> BlockRef {
         let handler = self.insert_basic_block_inner(bb.clone());
         match bb.name {
-            Some(name) =>
+            Some(name) => {
                 self.func
                     .as_mut()
                     .expect("builder has no working function")
                     .local_string_bb_map
-                    .insert(name, handler)
-                    .expect("basic block name duplicated"),
+                    .insert(name, handler);
+                handler
+            },
             None => handler
         }
     }
 
-    fn insert_value_inner(&mut self, value: Value) -> ValueRef {
+    pub fn insert_value_inner(&mut self, value: Value) -> ValueRef {
         self.module
             .value_ctx
             .insert(value)
     }
 
-    fn get_value(&self, value_ref: ValueRef) -> Value {
+    pub fn get_value(&self, value_ref: ValueRef) -> Value {
         self.module
             .value_ctx
             .get(value_ref)
@@ -295,7 +298,9 @@ impl IRBuilder {
             None => lhs_ty
         };
 
-        let handler = self.insert_local_symbol(values::Binary::new(result_ty, op, lhs, rhs));
+        let mut binexpr = values::Binary::new(result_ty, op, lhs, rhs);
+        binexpr.set_name(inner_name);
+        let handler = self.insert_local_symbol(binexpr);
         self.insert_instruction(handler);
         handler
 
@@ -334,8 +339,7 @@ impl IRBuilder {
             .unwrap();
 
         assert!(cond_value.ty.is_i1_type(),
-                "expect condition value `{}` i1 type in branch terminator, but found type `{}`",
-                cond_value.name.as_ref().unwrap().clone(),
+                "expect condition value i1 type in branch terminator, but found type `{}`",
                 cond_value.ty.clone());
         let current_function = self.module
             .func_ctx
@@ -369,8 +373,7 @@ impl IRBuilder {
         match expected_ret_ty {
             TypeKind::Function(_, ret_ty) =>
                 assert!(ret_value.ty.eq(&ret_ty),
-                        "expected return value `{}` {} type, but found {} type",
-                        ret_value.name.as_ref().unwrap().clone(),
+                        "expected return value {} type, but found {} type",
                         ret_ty.clone(),
                         ret_value.ty.clone()),
             _ => ()
