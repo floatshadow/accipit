@@ -77,7 +77,8 @@ fn lex_keyword(input: &str) -> IResult<&str, Token> {
     preceded(filter_whitespace_and_comment,
         alt((
             value(Token::KwFn, tag("fn")),
-            value(Token::KwLet, tag("let"))
+            value(Token::KwLet, tag("let")),
+            value(Token::KwLabel, tag("label"))
     )))(input)
 }
 
@@ -173,6 +174,26 @@ fn lex_identifier(input: &str) -> IResult<&str, Token> {
     Ok((input, Token::TkIdent(slice)))
 }
 
+fn lex_label(input: &str) -> IResult<&str, Token> {
+    let (input, _) = filter_whitespace_and_comment(input)?;
+    let (input, slice) = terminated(
+        alt((
+            /* named identifier */
+            recognize(
+                pair(
+                    alt((alpha1, tag("_"), tag("."), tag("-"))),
+                    many0_count(alt((alphanumeric1, tag("_"), tag("."), tag("-"))))
+                )
+            ),
+            /* anonymous identifer */
+            recognize(
+                digit1
+            )
+        )),
+        tag(":")
+    )(input)?;
+    Ok((input, Token::TkLabel(slice)))
+}
 
 fn lex_primitive_type(input: &str) -> IResult<&str, Token> {
     preceded(filter_whitespace_and_comment, alt((
@@ -195,6 +216,7 @@ impl Lexer {
         many0(alt((
             lex_literal,
             lex_identifier,
+            lex_label,
             lex_primitive_type,
             lex_delimiter,
             lex_binary_operator,

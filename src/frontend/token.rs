@@ -7,6 +7,7 @@ use std::iter::Enumerate;
 pub enum Token<'a> {
     // Identifier
     TkIdent(&'a str),
+    TkLabel(&'a str),
     // Literals
     LtInt64(i64),
     LtInt1(i8),
@@ -61,6 +62,7 @@ pub enum Token<'a> {
     // Reserved keywords
     KwFn,
     KwLet,
+    KwLabel,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

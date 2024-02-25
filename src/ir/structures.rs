@@ -10,6 +10,7 @@ use super::types::Type;
 new_key_type! {
     pub struct ValueRef;
     pub struct BlockRef;
+    pub struct FunctionRef;
 }
 
 #[derive(Debug, Clone)]
@@ -90,6 +91,7 @@ impl BasicBlock {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Function {
     pub ty: Type,
     pub name: String,
@@ -100,12 +102,14 @@ pub struct Function {
     pub blocks_ctx: SlotMap<BlockRef, BasicBlock>,
 }
 
-
+#[derive(Debug, Clone)]
 pub struct Module {
     pub name: Option<String>,
 
     pub value_ctx: SlotMap<ValueRef, Value>,
-    pub func_ctx: HashMap<String, Function>,
+    pub funcs: Vec<FunctionRef>,
+    pub func_ctx: SlotMap<FunctionRef, Function>,
+    pub string_func_map: HashMap<String, FunctionRef>,
 
     pub globals: Vec<ValueRef>
 }
@@ -115,7 +119,9 @@ impl Module {
         Module {
             name: None,
             value_ctx: SlotMap::with_key(),
-            func_ctx: HashMap::new(),
+            funcs: Vec::new(),
+            func_ctx: SlotMap::with_key(),
+            string_func_map: HashMap::new(),
             globals: Vec::new()
         }
     }
@@ -126,5 +132,12 @@ impl Module {
 
     pub fn get_value_type(&self, value_ref: ValueRef) -> Type {
         self.value_ctx.get(value_ref).unwrap().ty.clone()
+    }
+
+    pub fn get_function_ref(&self, name: &str) -> FunctionRef {
+        self.string_func_map
+            .get(name)
+            .unwrap()
+            .clone()
     }
 }

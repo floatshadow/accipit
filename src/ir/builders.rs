@@ -6,22 +6,22 @@ use std::cell::RefCell;
 use slotmap::SlotMap;
 
 use crate::utils::unique_name::UniqueName;
-use super::types::Type;
+use super::types::{Type, TypeKind};
 use super::{structures::*, values};
 
 
-struct FunctionEmitState<'a> {
+struct FunctionEmitState {
     /* local variabels */
     local_string_value_map: HashMap<String, ValueRef>,
     local_string_bb_map: HashMap<String, BlockRef>,
 
-    current_function: &'a mut Function,
+    current_function: FunctionRef,
     position: Option<BlockRef>,
     namer: UniqueName,
 }
 
-impl<'a> FunctionEmitState<'a> {
-    pub fn new(func: &mut Function) -> FunctionEmitState {
+impl FunctionEmitState {
+    pub fn new(func: FunctionRef) -> FunctionEmitState {
         FunctionEmitState {
             local_string_bb_map: HashMap::new(),
             local_string_value_map: HashMap::new(),
@@ -33,17 +33,17 @@ impl<'a> FunctionEmitState<'a> {
 }
 
 
-pub struct IRBuilder<'a> {
+pub struct IRBuilder {
     pub module: Module,
-    func: Option<FunctionEmitState<'a>>,
+    func: Option<FunctionEmitState>,
 
     /* global variables */
     global_string_value_map: HashMap<String, ValueRef>,
 }
 
 
-impl<'a> IRBuilder<'a> {
-    pub fn new() -> IRBuilder<'a> {
+impl IRBuilder {
+    pub fn new() -> IRBuilder {
         IRBuilder {
             module: Module::new(),
             func: None,
@@ -62,22 +62,22 @@ impl<'a> IRBuilder<'a> {
         }
     }
 
-    fn get_value_ref(&self, name: String) -> ValueRef {
+    pub fn get_value_ref(&self, name: &str) -> ValueRef {
         self.func
             .as_ref()
             .unwrap()
             .local_string_value_map
-            .get(&name)
+            .get(name)
             .unwrap()
             .clone()
     }
 
-    fn get_block_ref(&self, name: String) -> BlockRef {
+    pub fn get_block_ref(&self, name: &str) -> BlockRef {
         self.func
             .as_ref()
             .unwrap()
             .local_string_bb_map
-            .get(&name)
+            .get(name)
             .unwrap()
             .clone()
     }
@@ -108,7 +108,11 @@ impl<'a> IRBuilder<'a> {
             .as_mut()
             .unwrap();
         let working_bb = state.position.unwrap();
-        state.current_function.blocks_ctx
+        let current_function = self.module
+            .func_ctx
+            .get_mut(state.current_function)
+            .unwrap();
+        current_function.blocks_ctx
             .get_mut(working_bb)
             .unwrap()
             .instrs
@@ -159,15 +163,19 @@ impl<'a> IRBuilder<'a> {
     }
 
     fn insert_basic_block_inner(&mut self, bb: BasicBlock) -> BlockRef {
-        self.func
+        let state = self.func
             .as_mut()
-            .unwrap()
-            .current_function
+            .unwrap();
+        let current_function = self.module
+            .func_ctx
+            .get_mut(state.current_function)
+            .unwrap();        
+        current_function
             .blocks_ctx
             .insert(bb)
     }
 
-    pub fn emit_function(&'a mut self, 
+    pub fn emit_function(&mut self, 
         name: String, 
         params_ty: Vec<(Option<String>, Type)>, 
         ret_ty: Type,
@@ -205,17 +213,15 @@ impl<'a> IRBuilder<'a> {
         let func_ty = Type::get_function(params_ty, ret_ty);
         let function = Function {
             ty: func_ty,
-            name,
+            name: name.clone(),
             args: args_value_ref,
             is_external,
             blocks: Vec::new(),
             blocks_ctx: SlotMap::with_key()
         };
 
-        let func_ref = self.module
-            .func_ctx
-            .entry(function.name.clone())
-            .or_insert(function);
+        let func_ref = self.module.func_ctx.insert(function);
+        self.module.string_func_map.insert(name, func_ref);
 
         self.func = Some(FunctionEmitState {
             local_string_value_map: local_name_ctx,
@@ -225,7 +231,6 @@ impl<'a> IRBuilder<'a> {
             position: None,
             namer: UniqueName::new()
         });
-
         
         
     }
@@ -244,8 +249,12 @@ impl<'a> IRBuilder<'a> {
             .expect("builder has no working function");
         let mut new_bb = BasicBlock::new();
         new_bb.set_name(name);
-        let new_bb_ref = state.current_function.blocks_ctx.insert(new_bb);
-        state.current_function.blocks.push(new_bb_ref);
+        let current_function = self.module
+            .func_ctx
+            .get_mut(state.current_function)
+            .unwrap();
+        let new_bb_ref = current_function.blocks_ctx.insert(new_bb);
+        current_function.blocks.push(new_bb_ref);
         new_bb_ref
     }
 
@@ -297,7 +306,11 @@ impl<'a> IRBuilder<'a> {
             .as_mut()
             .unwrap();
         let working_bb = state.position.unwrap();
-        state.current_function.blocks_ctx
+        let current_function = self.module
+            .func_ctx
+            .get_mut(state.current_function)
+            .unwrap();
+        current_function.blocks_ctx
             .get_mut(working_bb)
             .unwrap()
             .set_terminator(
@@ -315,7 +328,20 @@ impl<'a> IRBuilder<'a> {
             .as_mut()
             .unwrap();
         let working_bb = state.position.unwrap();
-        state.current_function.blocks_ctx
+        let cond_value = self.module
+            .value_ctx
+            .get(cond)
+            .unwrap();
+
+        assert!(cond_value.ty.is_i1_type(),
+                "expect condition value `{}` i1 type in branch terminator, but found type `{}`",
+                cond_value.name.as_ref().unwrap().clone(),
+                cond_value.ty.clone());
+        let current_function = self.module
+            .func_ctx
+            .get_mut(state.current_function)
+            .unwrap();
+        current_function.blocks_ctx
             .get_mut(working_bb)
             .unwrap()
             .set_terminator(
@@ -330,8 +356,32 @@ impl<'a> IRBuilder<'a> {
         let state = self.func
             .as_mut()
             .unwrap();
+
+        let ret_value = self.module
+            .value_ctx
+            .get(return_value)
+            .unwrap();
+        let current_function = self.module
+            .func_ctx
+            .get(state.current_function)
+            .unwrap();
+        let expected_ret_ty: &TypeKind = &current_function.ty;
+        match expected_ret_ty {
+            TypeKind::Function(_, ret_ty) =>
+                assert!(ret_value.ty.eq(&ret_ty),
+                        "expected return value `{}` {} type, but found {} type",
+                        ret_value.name.as_ref().unwrap().clone(),
+                        ret_ty.clone(),
+                        ret_value.ty.clone()),
+            _ => ()
+        }
+
         let working_bb = state.position.unwrap();
-        state.current_function.blocks_ctx
+        let current_function = self.module
+            .func_ctx
+            .get_mut(state.current_function)
+            .unwrap();
+        current_function.blocks_ctx
             .get_mut(working_bb)
             .unwrap()
             .set_terminator(
