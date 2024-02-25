@@ -1,121 +1,116 @@
 
 use nom::{
-    branch::alt,
-    bytes::complete::{is_not, tag, take_until},
-    character::complete::{
+    branch::alt, bytes::complete::{is_not, tag, take, take_until}, character::complete::{
         alpha0, alpha1, 
         alphanumeric0, alphanumeric1, 
         char, digit0, digit1, 
         multispace0, multispace1
-    },
-    combinator::{all_consuming, map_res, recognize, value, opt},
-    multi::{fold_many1, many0_count, many1, separated_list0}, 
-    sequence::{delimited, pair, preceded, separated_pair, terminated, tuple}, 
-    Err, IResult
+    }, combinator::{all_consuming, map_res, opt, recognize, value}, error::{Error, ErrorKind, ParseError}, multi::{fold_many1, many0_count, many1, separated_list0}, sequence::{delimited, pair, preceded, separated_pair, terminated, tuple}, Compare, CompareResult, Err, IResult, InputIter, InputLength, InputTake, Needed, Slice
 };
 
 use crate::ir::{
-    types::Type, 
-    values,
-    structures::*
+    builders::IRBuilder, structures::*, types::Type, values
 };
 
+use super::lexer::Lexer;
+use super::token::{Token, Tokens};
 
-fn parse_usize_imm(input: &str) -> IResult<&str, usize> {
-    map_res(digit1, str::parse::<usize>)(input)
+
+fn token<'a, Input, Error: ParseError<Input>>(
+    t: Token<'a>
+) -> impl Fn(Input) -> IResult<Input, Input, Error> + 'a
+where
+    Input: InputTake + Compare<Token<'a>>
+{
+    move | i: Input | {
+        let token_len = t.input_len();
+        let t = t.clone();
+        let res: IResult<_, _, Error> = match i.compare(t) {
+            CompareResult::Ok => Ok(i.take_split(token_len)),
+            _ => {
+                let e: ErrorKind = ErrorKind::Tag;
+                Err(Err::Error(Error::from_error_kind(i, e)))
+            }
+        };
+        res
+    }
 }
 
-fn parse_i64_constant(input: &str) -> IResult<&str, Value> {
-    let (input, value) = map_res(
-        recognize(pair(opt(tag("-")), digit1)),
-        str::parse::<i64>
-    )(input)?;
-    Ok((input, values::ConstantInt::new_value(value)))
+fn identifier(input: Tokens) -> IResult<Tokens, &str> {
+    let (input, tk) = take(1usize)(input)?;
+    match tk.iter_elements().next().unwrap() {
+        Token::TkIdent(id) => Ok((input, id)),
+        _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+    }
 }
 
-fn parse_i8_cosntant(input: &str) -> IResult<&str, Value> {
+fn i64_literal(input: Tokens) -> IResult<Tokens, i64> {
+    let (input, tk) = take(1usize)(input)?;
+    match tk.iter_elements().next().unwrap() {
+        Token::LtInt64(value) => Ok((input, value.clone())),
+        _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+    }
+}
+
+fn i1_literal(input: Tokens) -> IResult<Tokens, i8> {
+    let (input, tk) = take(1usize)(input)?;
+    match tk.iter_elements().next().unwrap() {
+        Token::LtInt1(value) => Ok((input, value.clone())),
+        _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+    }
+}
+
+
+
+
+fn parse_base_type(input: Tokens) -> IResult<Tokens, Type> {
     alt((
-        value(values::ConstantInt::new_true_value(), tag("true")),
-        value(values::ConstantInt::new_false_value(), tag("false"))
+        value(Type::get_i64(), token(Token::TyInt64)),
+        value(Type::get_i1(), token(Token::TyInt1)),
+        value(Type::get_unit(), pair(
+            token(Token::LParen), token(Token::RParen)))
     ))(input)
 }
 
-
-fn parse_i64_type(input: &str) -> IResult<&str, Type> {
-    value(Type::get_i64(), tag("i64"))(input)
+fn parse_pointer_type(input: Tokens) -> IResult<Tokens, Type> {
+    let (input, base_ty) = parse_base_type(input)?;
+    fold_many1(
+        token(Token::Asterisk),
+        move | | base_ty.clone(),
+        | ty: Type, _| Type::get_pointer(ty)
+    )(input)
 }
 
-fn parse_i1_type(input: &str) -> IResult<&str, Type> {
-    value(Type::get_i1(), tag("i1"))(input)
-} 
-
-fn parse_unit_type(input: &str) -> IResult<&str, Type> {
-    value(Type::get_unit(), tag("()"))(input)
-}
-
-fn parse_base_type(input: &str) -> IResult<&str, Type> {
-    alt((
-        parse_i64_type,
-        parse_i1_type,
-        parse_unit_type
-    ))(input)
-}
-
-fn parse_pointer_type(input: &str) -> IResult<&str, Type> {
-    let (input, base_type) = parse_base_type(input)?;
-    let res = fold_many1(
-        char('*'), 
-        || base_type.clone(),
-        |ty: Type, _ | Type::get_pointer(ty)
-    )(input);
-    res
-}
-
-
-fn parse_function_type(input: &str) -> IResult<&str, Type> {
+fn parse_function_type(input: Tokens) -> IResult<Tokens, Type> {
+    /* format: fn(param_ty1, param_ty2, ...) -> return_ty */
     let (input, params) = preceded(
-        tag("fn"), 
+        token(Token::KwFn),
         delimited(
-            tag("("), 
-            separated_list0(tag(","), 
-                delimited(
-                    multispace0, 
-                    parse_type, 
-                    multispace0
-                )
+            token(Token::LParen),
+            separated_list0(
+                token(Token::Comma),
+                parse_type,
             ),
-            tag(")")
-        )    
+            token(Token::RParen)
+        )
     )(input)?;
+
     let (input, ret) = preceded(
-        delimited(
-            multispace0,
-            tag("->"),
-            multispace0
-        ), 
+        token(Token::Arrow),
         parse_type
     )(input)?;
     Ok((input, Type::get_function(params, ret)))
 }
 
-
-fn parse_type(input: &str) -> IResult<&str, Type> {
+fn parse_type(input: Tokens) -> IResult<Tokens, Type> {
     alt((
         parse_pointer_type,
         parse_base_type,
-        parse_function_type
+        /*  opaque pointer type */
+        value(Type::get_opaque_pointer(), token(Token::TyPtr)),
+        parse_function_type,
     ))(input)
 }
-
-fn filter_comment(input: &str) -> IResult<&str, ()> {
-    alt((
-        /* C EOL style */
-        value((), pair(tag("//"), is_not("\n\r"))),
-        /* C++ multiline style */
-        value((), tuple((tag("/*"), take_until("*/"), tag("*/"))))
-    ))(input)
-}
-
 
 fn parse_ident(input: &str) -> IResult<&str, &str> {
     alt((
@@ -133,78 +128,68 @@ fn parse_ident(input: &str) -> IResult<&str, &str> {
     ))(input)
 }
 
-fn parse_vident(input: &str) -> IResult<&str, &str> {
-    preceded(tag("%"), parse_ident)(input)
+fn parse_symbol(input: Tokens) -> IResult<Tokens, (&str, Option<Type>)> {
+    pair(
+        identifier,
+        opt(preceded(token(Token::Colon), parse_type))
+    )(input)
 }
 
-fn parse_pident(input: &str) -> IResult<&str, &str> {
-    preceded(tag("#"), parse_pident)(input)
+pub struct Parser {
+    lexer: Lexer
 }
 
-fn parse_gident(input: &str) -> IResult<&str, &str> {
-    preceded(tag("@"), parse_ident)(input)
-}
+impl Parser {
+    pub fn new() -> Parser {
+        Parser { lexer: Lexer::new() }
+    }
 
-fn parse_symbol(input: &str) -> IResult<&str, (&str, Option<Type>)> {
-    let (input, ident) = alt((parse_vident, parse_pident, parse_gident))(input)?;
-    let (input, ty) = opt(preceded(
-        delimited(
-            multispace0,
-            tag(":"), 
-            multispace0
-        ),
-        parse_type
-    ))(input)?;
-    Ok((input, (ident, ty)))
 
 }
 
-fn parse_binop(input: &str) -> IResult<&str, values::BinaryOp> {
-    alt((
-        value(values::BinaryOp::Add, tag("add")),
-        value(values::BinaryOp::Sub, tag("sub")),
-        value(values::BinaryOp::Mul, tag("mul")),
-        value(values::BinaryOp::Div, tag("div")),
-        value(values::BinaryOp::Rem, tag("rem")),
-        value(values::BinaryOp::And, tag("and")),
-        value(values::BinaryOp::Or, tag("or")),
-        value(values::BinaryOp::Xor, tag("xor")),
-        value(values::BinaryOp::Lt, tag("lt")),
-        value(values::BinaryOp::Gt, tag("gt")),
-        value(values::BinaryOp::Le, tag("le")),
-        value(values::BinaryOp::Ge, tag("ge")),
-        value(values::BinaryOp::Eq, tag("eq")),
-        value(values::BinaryOp::Ne, tag("ne")),
-    ))(input)
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use super::super::lexer::Lexer;
+
+
+    macro_rules! test_parser {
+        ($parser: ident, $input: expr, $result: expr) => {
+            let (res_input, tokens) = Lexer::lex($input).unwrap();
+            assert!(res_input.is_empty(), "lexer leaves out unlexed tokens");
+            let (_, output) = $parser(Tokens::new(&tokens)).unwrap();
+            assert_eq!(output, $result);          
+        };
+    }
+
+    #[test]
+    fn test_ident() {
+        test_parser!(parse_symbol, "%a.very.long.identifier", ("a.very.long.identifier", None));
+        test_parser!(parse_symbol, "@12", ("12", None));
+        test_parser!(parse_symbol, "%res: i64", ("res", Some(Type::get_i64())));
+        test_parser!(parse_symbol, "%implicit_symbol", ("implicit_symbol", None));
+        test_parser!(parse_symbol, "#DivisionByZero: fn(i64, i64) -> ()", 
+                    ("DivisionByZero", Some(Type::get_function(vec![Type::get_i64(), Type::get_i64()], Type::get_unit()))));
+    }
+
+    #[test]
+    fn test_type() {
+        test_parser!(parse_type, "i64", Type::get_i64());
+        test_parser!(parse_type, "i1", Type::get_i1());
+        test_parser!(parse_type, "()", Type::get_unit());
+        test_parser!(parse_type, "i64*", Type::get_pointer(Type::get_i64()));
+        test_parser!(parse_type, "i64**", Type::get_pointer(Type::get_pointer(Type::get_i64())));
+        test_parser!(parse_type, "fn() -> ()", 
+                Type::get_function(vec![], Type::get_unit()));
+        test_parser!(parse_type, "fn(i64, i64) -> ()", 
+                Type::get_function(vec![Type::get_i64(), Type::get_i64()], Type::get_unit()));
+        test_parser!(parse_type, "fn((), i64) -> i64*",
+                Type::get_function(vec![Type::get_unit(), Type::get_i64()], Type::get_pointer(Type::get_i64())));
+        test_parser!(parse_type, "fn(fn(i64) -> i64 ) -> ()",
+                Type::get_function(vec![Type::get_function(vec![Type::get_i64()], Type::get_i64())], Type::get_unit()));
+    }
 }
 
 
-#[test]
-fn test_literal() {
-    assert_eq!(parse_usize_imm("123456789"), Ok(("", 123456789usize)));
-}
-
-#[test]
-fn test_ident() {
-    assert_eq!(parse_ident("a.very.long.identifier"), Ok(("", "a.very.long.identifier")));
-    assert_eq!(parse_ident("12"), Ok(("", "12")));
-    assert_eq!(parse_symbol("%res: i64"), Ok(("", ("res", Some(Type::get_i64())))));
-    assert_eq!(parse_symbol("%implicit_symbol "), Ok((" ", ("implicit_symbol", None))));
-}
-
-#[test]
-fn test_type() {
-    assert_eq!(parse_type("i64"), Ok(("", Type::get_i64())));
-    assert_eq!(parse_type("i1"), Ok(("", Type::get_i1())));
-    assert_eq!(parse_type("()"), Ok(("", Type::get_unit())));
-    assert_eq!(parse_type("i64*"), Ok(("", Type::get_pointer(Type::get_i64()))));
-    assert_eq!(parse_type("i64**"), Ok(("", Type::get_pointer(Type::get_pointer(Type::get_i64())))));
-    assert_eq!(parse_type("fn() -> ()"), 
-            Ok(("", Type::get_function(vec![], Type::get_unit()))));
-    assert_eq!(parse_type("fn(i64, i64) -> ()"), 
-            Ok(("", Type::get_function(vec![Type::get_i64(), Type::get_i64()], Type::get_unit()))));
-    assert_eq!(parse_type("fn((), i64) -> i64*"),
-            Ok(("", Type::get_function(vec![Type::get_unit(), Type::get_i64()], Type::get_pointer(Type::get_i64())))));
-    assert_eq!(parse_type("fn(fn(i64) -> i64 ) -> ()"),
-            Ok(("", Type::get_function(vec![Type::get_function(vec![Type::get_i64()], Type::get_i64())], Type::get_unit()))));
-}

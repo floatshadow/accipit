@@ -49,8 +49,8 @@ fn lex_i64_literal(input: &str) -> IResult<&str, Token> {
 fn lex_i1_literal(input: &str) -> IResult<&str, Token> {
     let (input, _) = filter_whitespace_and_comment(input)?;
     alt((
-        value(Token::LtTkInt1(1), tag("true")),
-        value(Token::LtTkInt1(0), tag("false"))
+        value(Token::LtInt1(1), tag("true")),
+        value(Token::LtInt1(0), tag("false"))
     ))(input)
 }
 
@@ -93,18 +93,10 @@ fn lex_delimiter(input: &str) -> IResult<&str, Token> {
             value(Token::Arrow,     tag("->")),
             value(Token::Equal,     tag("=")),
             value(Token::Comma,     tag(",")),
+            value(Token::Colon,     tag(":")),
             value(Token::SemiColon, tag(";")),
             value(Token::Less,      tag("<")),
             value(Token::Asterisk,  tag("*")),          
-    )))(input)
-}
-
-fn lex_prefix(input: &str) -> IResult<&str, Token> { 
-    preceded(filter_whitespace_and_comment,
-        alt((
-            value(Token::PxAt,      tag("@")),
-            value(Token::PxPercent, tag("%")),
-            value(Token::PxSharp,   tag("#")), 
     )))(input)
 }
 
@@ -129,31 +121,88 @@ fn lex_binary_operator(input: &str) -> IResult<&str, Token> {
     )))(input)
 }
 
+fn lex_offset_operator(input: &str) -> IResult<&str, Token> {
+    preceded(filter_whitespace_and_comment,
+        value(Token::TkOffset, tag("offset"))
+    )(input)
+}
+
+fn lex_memory_operator(input: &str) -> IResult<&str, Token> {
+    preceded(filter_whitespace_and_comment,
+        alt((
+            value(Token::TkAlloca, tag("alloca")),
+            value(Token::TkLoad,   tag("load")),
+            value(Token::TkStore,  tag("store"))
+        ))
+    )(input)
+}
+
+fn lex_terminator_operator(input: &str) -> IResult<&str, Token> {
+    preceded(filter_whitespace_and_comment,
+        alt((
+            value(Token::TkJmp,    tag("jmp")),
+            value(Token::TKBranch, tag("br")),
+            value(Token::TKRet,    tag("ret"))
+        ))
+    )(input)
+}
+
+fn lex_function_cal_operator(input: &str) -> IResult<&str, Token> {
+    preceded(filter_whitespace_and_comment,
+        value(Token::TkFnCall, tag("call"))
+    )(input)
+}
 
 fn lex_identifier(input: &str) -> IResult<&str, Token> {
-    let (input, slice) = alt((
-        /* named identifier */
-        recognize(
-            pair(
-                alt((alpha1, tag("_"), tag("."), tag("-"))),
-                many0_count(alt((alphanumeric1, tag("_"), tag("."), tag("-"))))
+    let (input, _) = filter_whitespace_and_comment(input)?;
+    let (input, slice) = preceded(
+        alt((tag("%"), tag("#"), tag("@"))),
+        alt((
+            /* named identifier */
+            recognize(
+                pair(
+                    alt((alpha1, tag("_"), tag("."), tag("-"))),
+                    many0_count(alt((alphanumeric1, tag("_"), tag("."), tag("-"))))
+                )
+            ),
+            /* anonymous identifer */
+            recognize(
+                digit1
             )
-        ),
-        /* anonymous identifer */
-        recognize(
-            digit1
-        )
-    ))(input)?;
+    )))(input)?;
     Ok((input, Token::TkIdent(slice)))
 }
 
+
 fn lex_primitive_type(input: &str) -> IResult<&str, Token> {
-    alt((
-        value(Token::TyInt64, tag("i64")),
+    preceded(filter_whitespace_and_comment, alt((
+        value(Token::TyInt64,tag("i64")),
         value(Token::TyInt1, tag("i1")),
-        value(Token::TyUnit, tag("()"))
-    ))(input)
+        // value(Token::TyUnit, tag("()")),
+        value(Token::TyPtr,  tag("ptr")),
+    )))(input)
 }
 
 #[derive(Debug, Clone)]
 pub struct Lexer;
+
+impl Lexer {
+    pub fn new() -> Lexer {
+        Lexer {}
+    }
+
+    pub fn lex(input: &str) -> IResult<&str, Vec<Token>> {
+        many0(alt((
+            lex_literal,
+            lex_identifier,
+            lex_primitive_type,
+            lex_delimiter,
+            lex_binary_operator,
+            lex_offset_operator,
+            lex_memory_operator,
+            lex_function_cal_operator,
+            lex_terminator_operator,
+            lex_keyword
+        )))(input)
+    }
+}

@@ -1,22 +1,23 @@
-use nom::{InputIter, InputLength, InputTake, Needed, Slice};
-use std::iter::Enumerate;
+use nom::{Compare, CompareResult, InputIter, InputLength, InputTake, Needed, Slice};
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 use std::slice::Iter;
+use std::iter::Enumerate;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token<'a> {
-    /* Identifier */
+    // Identifier
     TkIdent(&'a str),
-    /* Literals */
+    // Literals
     LtInt64(i64),
-    LtTkInt1(i8),
+    LtInt1(i8),
     LtNone,
     LtNull,
-    /* primitive type keyword */
+    // primitive type keyword 
     TyInt64,
     TyInt1,
-    TyUnit,
-    /* Binary operator */
+    // no `TyUnit` due to the conflict (LParen, RParen) v.s. TyUnit
+    TyPtr,
+    // Binary operator
     TkAdd,
     TkSub,
     TkMul,
@@ -31,19 +32,19 @@ pub enum Token<'a> {
     TkGe,
     TkEq,
     TkNe,
-    /* Offset operator */
+    // Offset operator
     TkOffset,
-    /* Memoty operator */
+    // Memoty operator
     TkAlloca,
     TkLoad,
     TkStore,
-    /* Function Call */
+    // Function Call
     TkFnCall,
-    /* Terminators */
+    // Terminators
     TkJmp,
     TKBranch,
     TKRet,
-    /* Delimiters */
+    // Delimiters
     LParen,
     RParen,
     LBrace,
@@ -53,14 +54,11 @@ pub enum Token<'a> {
     Equal,
     Arrow,
     Comma,
+    Colon,
     SemiColon,
     Less,
     Asterisk,
-    /* Identifier prefix */
-    PxAt,
-    PxPercent,
-    PxSharp,
-    /* Reserved words */
+    // Reserved keywords
     KwFn,
     KwLet,
 }
@@ -82,13 +80,23 @@ impl<'a> Tokens<'a> {
     }
 }
 
-use std::ops::Index;
 
-impl<'a> Index<usize> for Tokens<'a> {
-    type Output = Token<'a>;
+impl<'a, 'b> Compare<Token<'b>> for Tokens<'a> {
+    #[inline(always)]
+    fn compare(&self, t: Token<'b>) -> nom::CompareResult {
+        match self.iter_elements()
+            .next()
+            .map(| elem | elem.eq(&t)) 
+        {
+            Some(true) => CompareResult::Ok,
+            Some(false) => CompareResult::Error,
+            None => CompareResult::Incomplete
+        }
+    }
 
-    fn index(&self, idx: usize) -> &Self::Output {
-        &self.tokens[idx]
+    #[inline(always)]
+    fn compare_no_case(&self, t: Token<'b>) -> nom::CompareResult {
+        panic!("token could not `compare_no_case`")
     }
 }
 
@@ -153,7 +161,7 @@ impl<'a> InputIter for Tokens<'a> {
         if self.tokens.len() >= count {
             Ok(count)
         } else {
-            Err(Needed::new(self.tokens.len()))
+            Err(Needed::new(count - self.tokens.len()))
         }
     }
 }
