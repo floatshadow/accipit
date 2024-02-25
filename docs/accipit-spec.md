@@ -61,11 +61,14 @@ pident    ::=  '#' <ident>
 gident    ::=  '@' <ident>
 ```
 
-为了避免与保留字 (reserved word) 冲突，实际使用时我们通常会给 ident 加上 '%' '@' '#' 等前缀以示区分：
+为了避免与保留字 (reserved word) 冲突（以及可能方便你 debug），我们会给 ident 加上 '%' '@' '#' 等前缀以示区分：
 
-- `%` 前缀的标识符用于指令 (instruction) 定义的符号；
-- `#` 前缀的标识符用于函数参数列表 (parameter list) 的符号；
-- `@` 前缀的标识符用于全局值的符号.
+- `%` 前缀的标识符用于指令 (instruction) 定义的符号和函数名，例如 `%result` `%functon_name`；
+- `#` 前缀的标识符用于函数参数列表 (parameter list) 的符号，例如 `#param.1`；
+- `@` 前缀的标识符用于全局值的符号，例如 `@AddrOfGlobalSymbol.`.
+
+**注意**：上述约定只是为了方便你阅读，并不是强制要求，你可以任意选择上述的前缀字符.
+例如你可以选择所有符号都以 '%' 开头.
 
 ```
 int_lit    ::=  '-'? <digit>+
@@ -119,7 +122,7 @@ Accipit IR 的代码由一系列指令 (instruction) 组成.
 Accipit IR 的计算模型基于命令式语言的寄存器机 (register machine).
 
 ```
-valuebinding   ::= 'let' <vident> '=' {<binexpr> | <gep> | <fncall> | <alloca> | <load> | <store>}
+valuebinding   ::= 'let' <symbol> '=' {<binexpr> | <gep> | <fncall> | <alloca> | <load> | <store>}
 terminator     ::= <jmp> | <br> | <ret>
 ```
 
@@ -259,7 +262,7 @@ Lret:
 ### Globals
 
 ```
-global ::= <gident> ':' <type> <int_lit>
+global ::= <symbol> ':' <type> <int_lit>
 ```
 
 # Execution
@@ -273,4 +276,4 @@ IR 的设计参考了以下课程与资料：
 
 - [北京大学编译原理课程](https://pku-minic.github.io/online-doc/#/) 的 Koopa IR.
 - [LLVM 项目](https://llvm.org/docs/LangRef.html) 的 IR 设计.
-- [SyOC](https://github.com/waterlens/syoc) 的 IR 设计，感谢 @杨汝清 学长的热心帮助.
+- [SyOC](https://github.com/waterlens/syoc) 的 IR 设计，感谢 @waterlens 的热心帮助.
