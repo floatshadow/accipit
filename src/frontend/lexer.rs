@@ -49,8 +49,8 @@ fn lex_i64_literal(input: &str) -> IResult<&str, Token> {
 fn lex_i1_literal(input: &str) -> IResult<&str, Token> {
     let (input, _) = filter_whitespace_and_comment(input)?;
     alt((
-        value(Token::LtInt1(1), tag("true")),
-        value(Token::LtInt1(0), tag("false"))
+        value(Token::LtInt1(true), tag("true")),
+        value(Token::LtInt1(false), tag("false"))
     ))(input)
 }
 

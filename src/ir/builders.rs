@@ -224,6 +224,7 @@ impl IRBuilder {
         };
 
         let func_ref = self.module.func_ctx.insert(function);
+        self.module.funcs.push(func_ref);
         self.module.string_func_map.insert(name, func_ref);
 
         self.func = Some(FunctionEmitState {

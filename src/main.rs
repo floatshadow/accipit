@@ -25,6 +25,6 @@ fn main() {
     let (_, tokens) = Lexer::lex(&src).unwrap();
     let token_wrapper = Tokens::new(&tokens);
     let builder = Rc::new(RefCell::new(IRBuilder::new()));
-    let module = Parser::parse_from_complete_input(token_wrapper, builder);
-    println!("Module: {:?}", module);
+    let (_, module) = Parser::parse_from_complete_input(token_wrapper, builder).unwrap();
+    println!("Module:\n{}", module);
 }

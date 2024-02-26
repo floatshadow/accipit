@@ -78,20 +78,27 @@ impl ConstantInt {
     pub fn new_value(value: i64) -> Value {
         Value::new(Type::get_i64(), None, ValueKind::ConstantInt(Self {value}))
     }
+}
 
-    pub fn new_bool_value(value: i8) -> Value {
-        let inner_value = i64::from(value);
-        Value::new(Type::get_i1(), None, ValueKind::ConstantInt(Self { value: inner_value }))
+#[derive(Debug, Clone)]
+pub struct ConstantBool {
+    pub value: bool
+}
+
+impl ConstantBool {
+    pub fn new_bool_value(value: bool) -> Value {
+        Value::new(Type::get_i1(), None, ValueKind::ConstantBool(Self { value }))
     }
 
     pub fn new_true_value() -> Value {
-        ConstantInt::new_bool_value(1i8)
+        ConstantBool::new_bool_value(true)
     }
 
     pub fn new_false_value() -> Value {
-        ConstantInt::new_bool_value(0i8)
+        ConstantBool::new_bool_value(false)
     }
 }
+
 
 /* Treat the parameters of function as `Value`.
  */
@@ -146,6 +153,7 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone)]
 pub struct Alloca {
+    pub elem_type: Type,
     pub num_elements: usize
 }
 

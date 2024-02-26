@@ -87,6 +87,27 @@ impl Type {
         Type::get(TypeKind::OpaquePtr)
     }
 
+    pub fn get_pointer_base_type(&self) -> Option<Type> {
+        match self.0.as_ref() {
+            TypeKind::Pointer(base_type) => Some(base_type.clone()),
+            _ => None
+        }
+    }
+
+    pub fn get_function_params_type(&self) -> Option<Vec<Type>> {
+        match self.0.as_ref() {
+            TypeKind::Function(param_ty, _) => Some(param_ty.clone()),
+            _ => None
+        }
+    }
+
+    pub fn get_function_ret_type(&self) -> Option<Type> {
+        match self.0.as_ref() {
+            TypeKind::Function(_, ret_ty) => Some(ret_ty.clone()),
+            _ => None
+        }
+    }
+
     pub fn get_function(params: Vec<Type>, ret: Type) -> Type {
         Type::get(TypeKind::Function(params, ret))
     }

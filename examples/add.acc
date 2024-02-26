@@ -17,3 +17,12 @@ fn %add_ret_unit(#1: i64, #2: i64) -> () {
     let %5: i64 = add #4, 1
     ret ()
 }
+
+fn %add_but_unused_bb(#a: i64, #b: i64) -> i64 {
+%3:
+    let %4 = add #a, #b
+    ret %4
+%dead_bb:
+    let %5: i64 = add #4, 1
+    ret %5
+}

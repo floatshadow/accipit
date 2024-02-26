@@ -56,7 +56,7 @@ fn i64_literal(input: Tokens) -> IResult<Tokens, i64> {
     }
 }
 
-fn i1_literal(input: Tokens) -> IResult<Tokens, i8> {
+fn i1_literal(input: Tokens) -> IResult<Tokens, bool> {
     let (input, tk) = take(1usize)(input)?;
     match tk.iter_elements().next().unwrap() {
         Token::LtInt1(value) => Ok((input, value.clone())),
@@ -67,7 +67,7 @@ fn i1_literal(input: Tokens) -> IResult<Tokens, i8> {
 fn parse_literal(input: Tokens) -> IResult<Tokens, Value> {
     alt((
         map(i64_literal, values::ConstantInt::new_value),
-        map(i1_literal, values::ConstantInt::new_bool_value),
+        map(i1_literal, values::ConstantBool::new_bool_value),
         value(values::ConstantUnit::new_value(),
             pair(token(Token::LParen), token(Token::RParen)))
     ))(input)
@@ -369,9 +369,23 @@ mod test {
 
     macro_rules! test_parser {
         ($parser: ident, $input: expr, $result: expr) => {{
-            let (res_input, tokens) = Lexer::lex($input).unwrap();
-            assert!(res_input.is_empty(), "lexer leaves out unlexed tokens");
-            let (_, output) = $parser(Tokens::new(&tokens)).unwrap();
+            let (_, tokens) = match Lexer::lex($input) {
+                Ok((res_input, tokens)) => {
+                    assert!(res_input.is_empty(),
+                            "lexer leaves out unlexed tokens `{}`",
+                            res_input);
+                    (res_input, tokens)
+                },
+                Err(error) =>
+                    panic!("failed to lex: {}", error)
+            };
+            let (_, output) = match $parser(Tokens::new(&tokens)) {
+                Ok((res_tokens, output)) => {
+                    (res_tokens, output)
+                },
+                Err(error) =>
+                    panic!("failed to pase: {}", error)
+            };
             assert_eq!(output, $result);
         }};
     }

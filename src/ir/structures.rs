@@ -1,10 +1,12 @@
-
+use std::fmt;
+use std::error::Error;
 use std::collections::HashMap;
 
 use slotmap::{SlotMap, new_key_type};
+use itertools::Itertools;
 
 use super::values;
-use super::types::Type;
+use super::types::{Type, TypeKind};
 
 
 new_key_type! {
@@ -16,6 +18,7 @@ new_key_type! {
 #[derive(Debug, Clone)]
 pub enum ValueKind {
     ConstantInt(values::ConstantInt),
+    ConstantBool(values::ConstantBool),
     ConstantNullPtr(values::ConstantNullPtr),
     ConstantUnit(values::ConstantUnit),
     Argument(values::Argument),
@@ -61,6 +64,22 @@ impl Value {
     }
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.kind {
+            ValueKind::ConstantInt(inner) => write!(f, "{}", inner.value),
+            ValueKind::ConstantBool(inner) => write!(f, "{}", inner.value),
+            ValueKind::ConstantNullPtr(_) => write!(f, "null: ptr"),
+            ValueKind::ConstantUnit(_) => write!(f, "()"),
+            ValueKind::Binary(..) | ValueKind::Offset(..) | ValueKind::FnCall(..) |
+            ValueKind::Alloca(..) | ValueKind::Load(..) | ValueKind::Store(..) =>
+                write!(f, "%{}: {}", self.name.clone().unwrap_or(String::from("<anonymous>")), self.ty),
+            ValueKind::Argument(..) =>
+                write!(f, "#{}: {}", self.name.clone().unwrap_or(String::from("<anonymous>")), self.ty)
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub name: Option<String>,
@@ -102,6 +121,12 @@ pub struct Function {
     pub blocks_ctx: SlotMap<BlockRef, BasicBlock>,
 }
 
+impl Function {
+    pub fn get_basic_block(&self, bb_ref: BlockRef) -> &BasicBlock {
+        self.blocks_ctx.get(bb_ref).unwrap()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Module {
     pub name: Option<String>,
@@ -126,8 +151,8 @@ impl Module {
         }
     }
 
-    pub fn get_value(&self, value_ref: ValueRef) -> Value {
-        self.value_ctx.get(value_ref).unwrap().clone()
+    pub fn get_value(&self, value_ref: ValueRef) -> &Value {
+        self.value_ctx.get(value_ref).unwrap()
     }
 
     pub fn get_value_type(&self, value_ref: ValueRef) -> Type {
@@ -139,5 +164,85 @@ impl Module {
             .get(name)
             .unwrap()
             .clone()
+    }
+}
+
+
+
+impl fmt::Display for Module {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for funcref in self.funcs.iter() {
+            let function = self
+                .func_ctx
+                .get(funcref.clone())
+                .unwrap();
+            let param_val = function.args
+                .iter()
+                .map(| arg_ref | self.get_value(arg_ref.clone()) )
+                .collect::<Vec<_>>();
+            write!(f, "fn %{}({}) -> {} ",
+                    function.name,
+                    param_val.iter().format(", "),
+                    function.ty.get_function_ret_type().unwrap()
+            )?;
+            if function.is_external {
+                write!(f, ";\n\n")?;
+            } else {
+                write!(f, "{{\n")?;
+                for bb_ref in function.blocks.iter() {
+                    let basic_block = function
+                        .blocks_ctx
+                        .get(bb_ref.clone())
+                        .unwrap();
+                    write!(f, "%{}:\n", basic_block.name
+                        .clone()
+                        .unwrap_or(String::from("%<unknown_label>")))?;
+                    for value_ref in basic_block.instrs.iter() {
+                        let value = self.get_value(value_ref.clone());
+                        match &value.kind {
+                            ValueKind::Alloca(inner) => {
+                                write!(f, "  let {} = alloca {}, {}\n",
+                                    value, inner.elem_type, inner.num_elements)
+                            },
+                            ValueKind::Binary(inner) => {
+                                let lhs = self.get_value(inner.lhs);
+                                let rhs = self.get_value(inner.rhs);
+                                write!(f, "  let {} = {} {}, {}\n",
+                                        value, inner.op, lhs, rhs)
+                            }
+                            _ => panic!("invalid instruction {}", value)
+                        }?;
+                    };
+
+                    match &basic_block.terminator {
+                        Terminator::Panic => write!(f, "  panic!\n"),
+                        Terminator::Branch(inner) => {
+                            let cond = self.get_value(inner.cond);
+                            let true_bb = function.get_basic_block(inner.true_label);
+                            let false_bb = function.get_basic_block(inner.false_label);
+                            write!(f, "  br {}, label %{}, label %{}\n",
+                                    cond,
+                                    true_bb.name.clone().unwrap_or(String::from("%<unknown_label>")),
+                                    false_bb.name.clone().unwrap_or(String::from("%<unknown_label>"))
+                            )
+                        },
+                        Terminator::Jump(inner) => {
+                            let bb = function.get_basic_block(inner.dest);
+                            write!(f, "  jmp label %{}\n",
+                                    bb.name.clone().unwrap_or(String::from("%<unknown_label>"))
+                            )
+                        },
+                        Terminator::Return(inner) => {
+                            let ret = self.get_value(inner.value);
+                            write!(f, "  ret {}\n",
+                                    ret
+                            )
+                        }
+                    }?;
+                }
+                write!(f, "}}\n\n")?
+            }
+        }
+        Ok(())
     }
 }

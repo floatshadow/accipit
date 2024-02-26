@@ -2,6 +2,7 @@ use nom::{Compare, CompareResult, InputIter, InputLength, InputTake, Needed, Sli
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 use std::slice::Iter;
 use std::iter::Enumerate;
+use std::ops::Index;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token<'a> {
@@ -9,7 +10,7 @@ pub enum Token<'a> {
     TkIdent(&'a str),
     // Literals
     LtInt64(i64),
-    LtInt1(i8),
+    LtInt1(bool),
     LtNone,
     LtNull,
     // primitive type keyword 
@@ -98,6 +99,14 @@ impl<'a, 'b> Compare<Token<'b>> for Tokens<'a> {
     #[inline(always)]
     fn compare_no_case(&self, t: Token<'b>) -> nom::CompareResult {
         panic!("token could not `compare_no_case`")
+    }
+}
+
+impl<'a> Index<usize> for Tokens<'a> {
+    type Output = Token<'a>;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.tokens[idx]
     }
 }
 
