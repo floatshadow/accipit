@@ -227,7 +227,7 @@ fun   ::= 'fn' <vident> '(' <plist> ')' '->' <type>? {';' | <body>}
 
 ```
 body  ::= '{' <bb>+ '}'
-label ::= <symbol> ':'
+label ::= <vident> ':'
 bb    ::= <label> <instr>* <terminator>
 ```
 
@@ -249,7 +249,7 @@ fn %factorial(#n: i64) -> i64 {
     jmp label %Lret
 %Lfalse:
     let %9: i64 = sub #n: i64, 1
-    let %res: i64 = call fn %factorial, %9
+    let %res: i64 = call %factorial, %9
     let %11: i64 = mul %9, %res
     let %12: () = store %11: i64, %ret.addr
     jmp label %Lret

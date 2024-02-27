@@ -1,6 +1,6 @@
 site_name: 浙江大学编译原理课程实验
-site_url: https://floatshadow.github.io/accipit/
-repo_url: https://github.com/floatshadow/accipit
+site_url: https://accsys.pages.zjusct.io/accipit/
+repo_url: https://git.zju.edu.cn/accsys/accipit
 repo_name: floatshadow/accipit
 theme:
   name: 'material'
@@ -28,6 +28,7 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
 nav:
+  - Lab 3 中间代码生成: middle-ir-gen.md
   - Accipit IR 规范: accipit-spec.md
   - SysY 语言规范: sysy-spec.md
 
