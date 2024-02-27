@@ -1,6 +1,6 @@
 site_name: 浙江大学编译原理课程实验
 site_url: https://floatshadow.github.io/accipit/
-repo_url: https://github.com/floatshaodw/accipit
+repo_url: https://github.com/floatshadow/accipit
 repo_name: floatshadow/accipit
 theme:
   name: 'material'
