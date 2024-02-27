@@ -29,6 +29,7 @@ theme:
         name: Switch to light mode
 nav:
   - Accipit IR 规范: accipit-spec.md
+  - SysY 语言规范: sysy-spec.md
 
 
 
