@@ -7,6 +7,7 @@ theme:
   language: 'zh'
   features:
     - content.code.annotate
+    - content.code.copy
     # - content.action.edit
     - navigation.tracking
     - navigation.top
@@ -47,6 +48,8 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 4
+  - codehilite
+  - markdown_grid_tables
   - meta
   - def_list
   - attr_list

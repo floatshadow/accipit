@@ -132,7 +132,7 @@ $ dot -Tpng -o test.png .test.dot
 其中有操作码 `binop`，两个源变量 `y` 和 `z`，以及一个目标变量 `x`，因此被称为“四元数”.
 一种常见的实现方式如下：
 
-```c
+```cpp
 class Instruction {
     // all possible opcode.
     enum Opcode { ... };
@@ -176,6 +176,7 @@ result = x add y
 ![dfg](images/dfg03.svg)
 
 你会发现，我们一直需要知道某个源变量最新的赋值发生在哪里，这意味这：
+
 - 要么每次从后往前扫描，第一个遇到的对源变量的赋值，就是最新的值，这样时间开销很大.
 - 要么维护一个稠密的集合，记录当前指令前所有变量最新的赋值发生在哪里，这样在变量很多的情况下空间开销很大.
 
@@ -196,7 +197,7 @@ result.1 = x.0 add y.1
 
 经过这么一番改造，指令的实现大致如下所示：
 
-```c
+```cpp
 class Instruction {
     // all possible opcode.
     enum Opcode { ... };
@@ -212,6 +213,277 @@ class Instruction {
 ```
 
 如果你有兴趣，可以阅读 Cliff Click 的 [From Quads to Graphs](http://softlib.rice.edu/pub/CRPC-TRs/reports/CRPC-TR93366-S.pdf).
+
+## 语法制导代码生成
+
+下一步我们就要把经过语义检查和推断的语法树转换成中间代码.
+基本思路是遍历语法树的节点，然后根据节点的类型生成对应的中间代码.
+其核心和语义分析类似，我们要实现一个 translate_X 函数，X 对应表达式，语句等等。
+
+### 表达式生成
+
+正如前面所述，每条指令实际上定义了一个新的变量，因此可以使用指令本身来表示变量，在 Accipit IR 中，值 (value) 包括变量和常数，因此我们先定义 `Value` 类型,：
+
+=== "C"
+    C 通常使用 enum + union：
+
+    ```c
+    enum value_kind {
+        kind_constant_int64,
+        Kind_constant_unit,
+        // ...
+        kind_constant_binary_expression,
+        kind_function_call,
+        kind_load,
+        kind_store,
+        // ...
+    };
+
+    struct value {
+        enum value_kind kind,
+        struct type *ty;
+        union {
+            struct { int number; } constant_int64;
+            struct { enum binary_op op, struct value *lhs, *rhs; } binary_expr;
+            struct { struct function *callee, struct vector args } function_call;
+            struct { struct value* src_addr } load;
+            struct { struct value* dest_addr, struct value *value_to_be_stored } store;
+        };
+    };
+    ```
+
+=== "C++"
+    C++ 可以使用面对对象实现：
+
+    ```cpp
+    class Value {
+        Type *ty;
+        /*...*/ 
+    };
+
+    class ConstantInt : public Value {
+        int number;
+        /*...*/ 
+    };
+
+    class BinaryExpr: public Value {
+        Value *lhs, *rhs;
+        /*...*/
+    };
+
+    class FnCall: public Value {
+        Function *callee;
+        std::vector<Value *> args;
+    };
+    ```
+
+=== "OCaml"
+    ML 系语言以及 Rust 都支持代数数据类型 (Algebraic Data Type)，可以很方便地定义：
+
+    ```ocaml
+    type ValueKinds = ConstantInt of int
+        | ConstantUnit
+        | BinaryExpr of BinOp * Value * Value
+        | FunctionCall of Function * Value list
+        | Load of Value
+        | Store of Value * Value
+    and
+    type Value = Type * ValueKinds
+    ```
+
+因此 `translate_expr` 函数定义为：
+
+```plaintext
+translate_expr(expr, symbol_table, basic_block) -> value
+```
+
+也就是说，`translate_expr` 将表达式翻译到中端 IR 的 value.
+其中 `symbol_table` 是符号表，通常维护一个 `string -> value` 的映射，虽然上文提到，在类似 SSA 的形式下，变量的名字并不重要，但是在处理局部变量时我们为每个局部变量分配一个栈上的位置，需要记录变量名字到对应 alloca 指令的映射.
+重复命名的变量，如在一个语句块里定义的变量和外层的变量重名时，你需要自行处理.
+
+由于 `translate_expr` 是生成线性的指令流，需要传入基本块信息，来指定指令生成在哪个基本块.
+
+面对形如 `expr1 + expr2` 这样的二元表达式，我们递归调用两个子节点的 `translate_expr`，然后生成一条加法指令将他们加起来，最后 `result_value` 将作为 `translate_expr` 的返回值：
+
+```plaintext
+lhs_value = translate_expr(expr1, sym_table, basic_block)
+rhs_value = translate_expr(expr2, sym_table, basic_block)
+result_value = create_binary(lhs, rhs, basic_block)
+return result_value
+```
+
+上面生成的指令在 IR 中看起来可能像这样，其中 `%2` 是 `translate_expr` 的返回值：
+
+```rust
+// lhs value, anonymous
+let %0 = .....
+// rhs value, anonymous
+let %1 = .....
+/// result value
+let %2 = add %0, %1
+```
+
+我们可以将表达式的翻译规则总结如下：
+
+<style>
+.md-typeset table:not([class]) th {
+    min-width: 1em;
+}
+</style>
+
+<div style="text-align: center" markdown="1">
+
++---------------------+--------------------------------------------------------------------+
+| Expr                | Action                                                             |
++=====================+====================================================================+
+| `INT`               | number = get_number(INT);                                          |
+|                     |                                                                    |
+|                     | // constant int is NOT a instruction!                              |
+|                     | return create_constant_int64(number);                              |
++---------------------+--------------------------------------------------------------------+
+| `ID`                | addr_of_value = lookup(sym_table, ID);                             |
+|                     |                                                                    |
+|                     | return create_load(addr_of_value, basic_block);                    |
++---------------------+--------------------------------------------------------------------+
+| `Expr1 BinOp Expr2` | binop = get_binop(BinOp);                                          |
+|                     |                                                                    |
+|                     | expr1_value = translate_expr(expr1, sym_table);                    |
+|                     | expr2_value = translate_expr(expr2, sym_table);                    |
+|                     | return create_binary(binop, expr1, expr2, basic_block);            |
++---------------------+--------------------------------------------------------------------+
+| `MINUS Expr1`       | zero_value = create_constant_int64(0);                             |
+|                     |                                                                    |
+|                     | expr1_value = translate_expr(Expr1, sym_table);                    |
+|                     | return create_binary(subop, zero_value, expr1_value, basic_block); |
++---------------------+--------------------------------------------------------------------+
+| `Call ID, Args`     | function = lookup(sym_table, ID);                                  |
+|                     |                                                                    |
+|                     | args_list = [];                                                    |
+|                     | for arg in Args:                                                   |
+|                     |   args_list += translate_expr(arg, sym_table, basic_block);        |
+|                     | return create_function_call(function, args_list, basic_block);     |
++---------------------+--------------------------------------------------------------------+
+</div>
+
+其中 `create_load` `create_binary` `create_function_call` 是生成指令的接口，它们的最后一个参数是基本块 `basic_block`，表示指令在这个基本块中插入，由于基本块中指令是线性的，你可以在基本块中维护一个 `vector`，不断加入指令即可，类似于：
+
+```cpp
+void insert_instruction(Instruction *inst, BasicBlock *block) {
+    std::vector<Instruction *> &instrs = block.getInstrs();
+    instrs.push_bakc(inst);
+}
+```
+
+### 语句生成
+
+我们定义 `translate_stmt(stmt, symbol_table, basic_block) -> exit_basic_block`.
+
+由于语句块可能包含控制流的跳转，但是整个语句块并没有产生值，所以 `translate_stmt` 将返回一个基本块，表示 `stmt` 结束后，控制流将在哪个基本块继续。
+
+条件语句的生成则要复杂些，我们所定义的基本块中间在这里将发挥重要作用.
+直觉上来说，If 语句应该生成如下的中间代码：
+```c
+if (exp) {
+    stmt1;
+} else {
+    stmt2;
+}
+
+    let %cond_value = translate_expr(cond)
+    br cond, label %true_label, label %false_label
+%true_label:
+    translate_stmt(stmt1)
+    jmp label %exit_label
+%false_label:
+    translate_stmt(stmt2)
+    jmp label %exit_label
+%exit_label:
+    ...
+```
+
+`cond_value` 为真时跳转到 `%true_label`，为假时跳转到 `%false_label`，最后两个基本块的控制流在 `%exit_label` 合并. 
+而这也就是 If 语句的翻译流程：
+
+- 生成新的基本块 `true_label`，`false_label` 和 `exit_label`，分别用于条件为真时的跳转，条件为假时的跳转，控制流的合并.
+- 调用 `translate_expr` 生成条件表达式的中间代码，传入 `true_label` 和 `false_label` 作为条件为真时和条件为假时的跳转位置.
+- 而对于具体的语句，只需要递归调用 `translate_stmt` 即可.
+- 把 `true_label` 和 `false_label` 的终结指令 (Terminator) 设置为 `jmp label %exit_label` 完成控制流合并.
+
+其余类型的条件语句本质上是一样的，我们不再一一赘述.
+我们总结语句翻译的规则如下：
+
+<style>
+.md-typeset table:not([class]) th {
+    min-width: 1em;
+}
+</style>
+
+<div style="text-align: center" markdown="1">
+
++------------------------------+------------------------------------------------------------------------+
+| Stmt                         | Action                                                                 |
++==============================+========================================================================+
+| `Expr`                       | translate_expr(expr, sym_table, basic_block);                          |
+|                              | return basic_block;                                                    |
++------------------------------+------------------------------------------------------------------------+
+| `ID = Expr`                  | addr_of_value = lookup(sym_table, ID);                                 |
+|                              | result = translate_expr(Expr, sym_table, basic_block);                 |
+|                              | create_store(result, addr_of_value, basic_block);                      |
+|                              | return basic_block;                                                    |
++------------------------------+------------------------------------------------------------------------+
+| `If (Expr) Stmt`             | exit_basic_block = new_label();                                        |
+|                              | true_basic_block = new_label();                                        |
+|                              | cond_value = translate_expr(Expr, sym_table, basic_block);             |
+|                              | // in `basic_block`, branch `true`/`exit`                              |
+|                              | create_branch(cond, true_basic_block, exit_basic_block, basic_block);  |
+|                              |                                                                        |
+|                              | // instructions in true arm of If Stmt.                                |
+|                              | translate_stmt(Stmt, true_label);                                      |
+|                              | // jump from `true_basic_block` to `exit_basic_block`.                 |
+|                              | create_jmp(exit_basic_block, true_basic_block);                        |
+|                              | return exit_basic_block;                                               |
++------------------------------+------------------------------------------------------------------------+
+| `If (Expr) Stmt1 Else Stmt2` | exit_basic_block = new_label();                                        |
+|                              |                                                                        |
+|                              |                                                                        |
+|                              | true_basic_block = new_label();                                        |
+|                              | false_basic_block = new_label();                                       |
+|                              | cond_value = translate_expr(Expr, sym_table, basic_block);             |
+|                              | // in `basic_block`, branch `true`/`exit`                              |
+|                              | create_branch(cond, true_basic_block, false_basic_block, basic_block); |
+|                              |                                                                        |
+|                              | // instructions in true arm of If Stmt.                                |
+|                              | translate_stmt(Stmt, true_label);                                      |
+|                              | // jump from `true_basic_block` to `exit_basic_block`.                 |
+|                              | create_jmp(exit_basic_block, true_basic_block);                        |
+|                              |                                                                        |
+|                              | // instructions in false arm of If Stmt.                               |
+|                              | translate_stmt(Stmt, false_label);                                     |
+|                              | // jump                                                                |
+|                              | create_jmp(exit_basic_block, false_basic_block);                       |
+|                              |                                                                        |
+|                              | // control flow continues in `exit`                                    |
+|                              | return exit_basic_block;                                               |
++------------------------------+------------------------------------------------------------------------+
+| `While (Expr) Stmt`          | entry_bb = new_label()                                                 |
+|                              |                                                                        |
+|                              | body_bb = new_label()                                                  |
+|                              | exit_bb = new_label()                                                  |
+|                              |                                                                        |
+|                              | // entry bb should be separated from previous code.                    |
+|                              | create_jump(entry_bb, basic_block);                                    |
+|                              | // while condition                                                     |
+|                              | cond_value = translate_expr(Expr, sym_table, basic_block);             |
+|                              | create_branch(cond, body_bb, exit_bb, entry_bb);                       |
+|                              |                                                                        |
+|                              | // body, after body, jump back to entry.                               |
+|                              | translate_stmt(Stmt, body_bb);                                         |
+|                              | create_jump(entry_bb, body_bb);                                        |
+|                              |                                                                        |
+|                              | // control flow continues in `exit`                                    |
+|                              | return exit_bb;                                                        |
++------------------------------+------------------------------------------------------------------------+
+</div>
 
 ## 你的任务
 
