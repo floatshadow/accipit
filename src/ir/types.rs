@@ -116,6 +116,10 @@ impl Type {
         matches!(self.0.as_ref(), TypeKind::Int64 | TypeKind::Int1)
     }
 
+    pub fn is_i64_type(&self) -> bool {
+        matches!(self.0.as_ref(), TypeKind::Int64)
+    }
+
     pub fn is_i1_type(&self) -> bool {
         matches!(self.0.as_ref(), TypeKind::Int1)
     }
