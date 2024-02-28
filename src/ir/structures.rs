@@ -165,6 +165,10 @@ impl Module {
             .unwrap()
             .clone()
     }
+
+    pub fn get_function(&self, func_ref: FunctionRef) -> &Function {
+        self.func_ctx.get(func_ref).unwrap()
+    }
 }
 
 

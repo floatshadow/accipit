@@ -9,8 +9,9 @@ use slotmap::{SlotMap, SecondaryMap};
 pub enum ExecutionError {
     SymbolNotFound(String),
     TypeMismatch(Value, Val),
-    OffsetInvalidIndex(Value, usize, usize),
-    InvalidPointer,
+    OffsetInvalidIndex(Value, Val, Option<usize>),
+    OffsetExceedMemoryRegion(Value),
+    InvalidPointer(Value, Val),
     StuckInPanic,
     NotImplemented(String),
     UnexpectedIncompatibleVal(Val),
@@ -39,6 +40,23 @@ impl MemoryObject {
 
     pub fn is_valid_memory(&self) -> bool {
         self.offset_within < self.size
+    }
+
+    pub fn try_from_offset(
+        base: &MemoryObject,
+        offset: usize
+    ) -> Option<MemoryObject> {
+        let total_offset = base.offset_within + offset;
+        if total_offset < base.size {
+            Some(MemoryObject {
+                function: base.function.clone(),
+                base: base.base,
+                offset_within: total_offset,
+                size: base.size
+            })
+        } else {
+            None
+        }
     }
 }
 
@@ -172,7 +190,9 @@ impl Val {
 
 pub struct ProgramEnv {
     pub val_env: SecondaryMap<ValueRef, Val>,
-    pub memory: SecondaryMap<ValueRef, Val>,
+    pub memory: SecondaryMap<ValueRef, Vec<Val>>,
+
+    pub working_function: Option<FunctionRef>,
     /// current working basic block.
     pub position: Option<BlockRef>,
     /// program counter.
@@ -188,6 +208,23 @@ impl ProgramEnv {
     pub fn get_val(&self, value_ref: ValueRef) -> &Val {
         self.val_env.get(value_ref).unwrap()
     }
+
+    pub fn get_top_function<'a>(&'a self, module: &'a Module) -> &Function {
+        module.get_function(self.working_function.expect("no function is running"))
+    }
+
+    pub fn get_memory(&self, base: ValueRef) -> &Vec<Val> {
+        self.memory.get(base).unwrap()
+    }
+
+    pub fn get_memory_mut(&mut self, base: ValueRef) -> &mut Vec<Val> {
+        self.memory.get_mut(base).unwrap()
+    }
+
+    pub fn initialize_memory(&mut self, base: ValueRef, size: usize) {
+        let unitialized_object = vec![Val::Undefined; size];
+        self.memory.insert(base, unitialized_object);
+    }
 }
 
 impl ProgramEnv {
@@ -195,6 +232,7 @@ impl ProgramEnv {
         ProgramEnv {
             val_env: SecondaryMap::new(),
             memory: SecondaryMap::new(),
+            working_function: None,
             position: None,
             program_counter: None,
             frames: Vec::new()
@@ -206,15 +244,115 @@ impl ProgramEnv {
 pub fn single_step(
     env: &mut ProgramEnv,
     module: &Module,
-    value_data: &Value 
+    value: ValueRef 
 ) -> Result<Val, ExecutionError> {
+    let value_data = module.get_value(value);
     match &value_data.kind {
         ValueKind::Binary(inner) => {
             let lhs = env.get_val(inner.lhs);
             let rhs = env.get_val(inner.rhs);
             Val::compute_binary(module, inner.op.clone(), lhs, rhs)
         },
-        _ => Err(ExecutionError::NotImplemented(String::from("Unhandled Instruction")))
+        ValueKind::Offset(inner) => {
+            let base_addr_value = module.get_value(inner.base_addr);
+            let base_addr_val = env
+                .get_val(inner.base_addr)
+                .clone()
+                .matches_value(base_addr_value)?;
+            
+            // bound checking
+            let indices: Vec<usize> = inner.index
+                .iter().cloned().zip(inner.bounds.iter().cloned())
+                .map(| (index, bound) | {
+                    let index_val = env.get_val(index);
+                    match &index_val {
+                        Val::Integer(index_inner) => {
+                            let try_usize_index = usize::try_from(index_inner.clone());
+                            match (try_usize_index, bound) {
+                                (Ok(converted_index), Some(inner_bound)) if converted_index < inner_bound =>
+                                    Ok(converted_index),
+                                (Ok(converted_index), None) =>
+                                    Ok(converted_index),
+                                _ => Err(ExecutionError::OffsetInvalidIndex(
+                                    module.get_value(index).clone(),
+                                    index_val.clone(),
+                                    bound
+                                ))
+                            }
+                        },
+                        _ => Err(ExecutionError::TypeMismatch(
+                                module.get_value(index).clone(),
+                                index_val.clone()))
+                    }
+                })
+                .collect::<Result<_, _>>()?;
+            
+            // compute accumulated offset
+            let last_dim_subdim = [Some(1usize)];
+            let total_offset: usize = indices
+                .into_iter().zip(inner.bounds.iter().cloned().chain(last_dim_subdim.into_iter()))
+                .fold(0usize, | acc, (index, next_dim_bound) | {
+                    acc + index * next_dim_bound.expect("expected bounded dimension in `Offset`")
+                });
+            
+            let memory_object = match base_addr_val {
+                Val::Pointer(memory_object) => Ok(memory_object.clone()),
+                _ => Err(ExecutionError::TypeMismatch(base_addr_value.clone(), base_addr_val.clone()))
+            }?;
+            MemoryObject::try_from_offset(&memory_object, total_offset)
+                .map_or_else(| | Err(ExecutionError::OffsetExceedMemoryRegion(value_data.clone())),
+                | memory_obj | Ok(Val::Pointer(memory_obj)))
+        },
+        ValueKind::FnCall(inner) => {
+
+            let args_val = inner.args
+                .iter().cloned()
+                .map(| arg_ref | env.get_val(arg_ref).clone())
+                .collect::<Vec<_>>();
+
+            let func_ref = module.get_function_ref(&inner.callee);
+            run_on_function(
+                env,
+                module,
+                func_ref,
+                args_val)
+        },
+        ValueKind::Alloca(inner) => {
+            let function = env.get_top_function(module);
+            let memory_object = MemoryObject {
+                function: function.name.clone(),
+                base: value,
+                offset_within: 0,
+                size: inner.num_elements
+            };
+            env.initialize_memory(value, inner.num_elements);
+            Ok(Val::Pointer(memory_object))
+        },
+        ValueKind::Load(inner) => {
+            let addr_value = module.get_value(inner.addr);
+            let addr_val = env.get_val(inner.addr);
+            let memory_object = match addr_val {
+                Val::Pointer(memory_object) => Ok(memory_object.clone()),
+                _ => Err(ExecutionError::TypeMismatch(addr_value.clone(), addr_val.clone()))
+            }?;
+
+            let whole_object = env.get_memory(memory_object.base);
+            Ok(whole_object[memory_object.offset_within].clone())
+        },
+        ValueKind::Store(inner) => {
+            let addr_value = module.get_value(inner.addr);
+            let addr_val = env.get_val(inner.addr);
+            let memory_object = match addr_val {
+                Val::Pointer(memory_object) => Ok(memory_object.clone()),
+                _ => Err(ExecutionError::TypeMismatch(addr_value.clone(), addr_val.clone()))
+            }?;
+
+            let value_stored = env.get_val(inner.value).clone();
+            let whole_object = env.get_memory_mut(memory_object.base);
+            whole_object[memory_object.offset_within] = value_stored;
+            Ok(Val::Unit)
+        }
+        _ => Err(ExecutionError::NotImplemented(String::from("Expected Instruction")))
     }
 }
 
@@ -260,8 +398,7 @@ pub fn run_on_basicblock(
 ) -> Result<Val, ExecutionError> {
     for instr in block.instrs.iter().cloned() {
         env.program_counter = Some(instr);
-        let value_data = module.get_value(instr);
-        let val = single_step(env, module, value_data)?;
+        let val = single_step(env, module, instr)?;
         env.set_val(instr, val);
     };
     single_step_terminator(env, module, &block.terminator)
@@ -274,6 +411,7 @@ pub fn run_on_function(
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
     env.frames.push(function);
+    env.working_function = Some(function);
     let function = module.func_ctx.get(function).unwrap();
     // set args values
     let params: Vec<Val> = args
