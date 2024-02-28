@@ -49,7 +49,6 @@ markdown_extensions:
       permalink: true
       toc_depth: 4
   - codehilite
-  - markdown_grid_tables
   - meta
   - def_list
   - attr_list

@@ -11,5 +11,5 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: 3.x
-      - run: pip install mkdocs-material mkdocs-heti-plugin markdown-grid-tables
+      - run: pip install mkdocs-material mkdocs-heti-plugin
       - run: mkdocs gh-deploy --force

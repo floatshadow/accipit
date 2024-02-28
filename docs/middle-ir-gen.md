@@ -325,45 +325,53 @@ let %2 = add %0, %1
 
 我们可以将表达式的翻译规则总结如下：
 
-<style>
-.md-typeset table:not([class]) th {
-    min-width: 1em;
-}
-</style>
 
-<div style="text-align: center" markdown="1">
 
-+---------------------+--------------------------------------------------------------------+
-| Expr                | Action                                                             |
-+=====================+====================================================================+
-| `INT`               | number = get_number(INT);                                          |
-|                     |                                                                    |
-|                     | // constant int is NOT a instruction!                              |
-|                     | return create_constant_int64(number);                              |
-+---------------------+--------------------------------------------------------------------+
-| `ID`                | addr_of_value = lookup(sym_table, ID);                             |
-|                     |                                                                    |
-|                     | return create_load(addr_of_value, basic_block);                    |
-+---------------------+--------------------------------------------------------------------+
-| `Expr1 BinOp Expr2` | binop = get_binop(BinOp);                                          |
-|                     |                                                                    |
-|                     | expr1_value = translate_expr(expr1, sym_table);                    |
-|                     | expr2_value = translate_expr(expr2, sym_table);                    |
-|                     | return create_binary(binop, expr1, expr2, basic_block);            |
-+---------------------+--------------------------------------------------------------------+
-| `MINUS Expr1`       | zero_value = create_constant_int64(0);                             |
-|                     |                                                                    |
-|                     | expr1_value = translate_expr(Expr1, sym_table);                    |
-|                     | return create_binary(subop, zero_value, expr1_value, basic_block); |
-+---------------------+--------------------------------------------------------------------+
-| `Call ID, Args`     | function = lookup(sym_table, ID);                                  |
-|                     |                                                                    |
-|                     | args_list = [];                                                    |
-|                     | for arg in Args:                                                   |
-|                     |   args_list += translate_expr(arg, sym_table, basic_block);        |
-|                     | return create_function_call(function, args_list, basic_block);     |
-+---------------------+--------------------------------------------------------------------+
-</div>
+<table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 75%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Expr</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>INT</code></td>
+<td><div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>number <span class="op">=</span> get_number<span class="op">(</span>INT<span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_constant_int64<span class="op">(</span>number<span class="op">);</span></span></code></pre></div></td>
+</tr>
+<tr class="even">
+<td><code>ID</code></td>
+<td><div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>addr_of_value <span class="op">=</span> lookup<span class="op">(</span>sym_table<span class="op">,</span> ID<span class="op">);</span>`</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_load<span class="op">(</span>addr_of_value<span class="op">,</span> basic_block<span class="op">);</span></span></code></pre></div></td>
+</tr>
+<tr class="odd">
+<td><code>Expr1 BinOp Expr2</code></td>
+<td><div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>binop <span class="op">=</span> get_binop<span class="op">(</span>BinOp<span class="op">);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>expr1_value <span class="op">=</span> translate_expr<span class="op">(</span>expr1<span class="op">,</span> sym_table<span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>expr2_value <span class="op">=</span> translate_expr<span class="op">(</span>expr2<span class="op">,</span> sym_table<span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_binary<span class="op">(</span>binop<span class="op">,</span> expr1<span class="op">,</span> expr2<span class="op">,</span> basic_block<span class="op">);</span></span></code></pre></div></td>
+</tr>
+<tr class="even">
+<td><code>MINUS Expr1</code></td>
+<td><div class="sourceCode" id="cb4"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>zero_value <span class="op">=</span> create_constant_int64<span class="op">(</span><span class="dv">0</span><span class="op">);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>expr1_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr1<span class="op">,</span> sym_table<span class="op">);</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_binary<span class="op">(</span>subop<span class="op">,</span> zero_value<span class="op">,</span> expr1_value<span class="op">,</span> basic_block<span class="op">);</span></span></code></pre></div></td>
+</tr>
+<tr class="odd">
+<td><code>Call ID, Args</code></td>
+<td><pre><code>function = lookup(sym_table, ID);
+args_list = [];
+for arg in Args:
+  args_list += translate_expr(arg, sym_table, basic_block);
+return create_function_call(function, args_list, basic_block);</code></pre></td>
+</tr>
+</tbody>
+</table>
 
 其中 `create_load` `create_binary` `create_function_call` 是生成指令的接口，它们的最后一个参数是基本块 `basic_block`，表示指令在这个基本块中插入，由于基本块中指令是线性的，你可以在基本块中维护一个 `vector`，不断加入指令即可，类似于：
 
@@ -412,78 +420,80 @@ if (exp) {
 其余类型的条件语句本质上是一样的，我们不再一一赘述.
 我们总结语句翻译的规则如下：
 
-<style>
-.md-typeset table:not([class]) th {
-    min-width: 1em;
-}
-</style>
 
-<div style="text-align: center" markdown="1">
 
-+------------------------------+------------------------------------------------------------------------+
-| Stmt                         | Action                                                                 |
-+==============================+========================================================================+
-| `Expr`                       | translate_expr(expr, sym_table, basic_block);                          |
-|                              | return basic_block;                                                    |
-+------------------------------+------------------------------------------------------------------------+
-| `ID = Expr`                  | addr_of_value = lookup(sym_table, ID);                                 |
-|                              | result = translate_expr(Expr, sym_table, basic_block);                 |
-|                              | create_store(result, addr_of_value, basic_block);                      |
-|                              | return basic_block;                                                    |
-+------------------------------+------------------------------------------------------------------------+
-| `If (Expr) Stmt`             | exit_basic_block = new_label();                                        |
-|                              | true_basic_block = new_label();                                        |
-|                              | cond_value = translate_expr(Expr, sym_table, basic_block);             |
-|                              | // in `basic_block`, branch `true`/`exit`                              |
-|                              | create_branch(cond, true_basic_block, exit_basic_block, basic_block);  |
-|                              |                                                                        |
-|                              | // instructions in true arm of If Stmt.                                |
-|                              | translate_stmt(Stmt, true_label);                                      |
-|                              | // jump from `true_basic_block` to `exit_basic_block`.                 |
-|                              | create_jmp(exit_basic_block, true_basic_block);                        |
-|                              | return exit_basic_block;                                               |
-+------------------------------+------------------------------------------------------------------------+
-| `If (Expr) Stmt1 Else Stmt2` | exit_basic_block = new_label();                                        |
-|                              |                                                                        |
-|                              |                                                                        |
-|                              | true_basic_block = new_label();                                        |
-|                              | false_basic_block = new_label();                                       |
-|                              | cond_value = translate_expr(Expr, sym_table, basic_block);             |
-|                              | // in `basic_block`, branch `true`/`exit`                              |
-|                              | create_branch(cond, true_basic_block, false_basic_block, basic_block); |
-|                              |                                                                        |
-|                              | // instructions in true arm of If Stmt.                                |
-|                              | translate_stmt(Stmt, true_label);                                      |
-|                              | // jump from `true_basic_block` to `exit_basic_block`.                 |
-|                              | create_jmp(exit_basic_block, true_basic_block);                        |
-|                              |                                                                        |
-|                              | // instructions in false arm of If Stmt.                               |
-|                              | translate_stmt(Stmt, false_label);                                     |
-|                              | // jump                                                                |
-|                              | create_jmp(exit_basic_block, false_basic_block);                       |
-|                              |                                                                        |
-|                              | // control flow continues in `exit`                                    |
-|                              | return exit_basic_block;                                               |
-+------------------------------+------------------------------------------------------------------------+
-| `While (Expr) Stmt`          | entry_bb = new_label()                                                 |
-|                              |                                                                        |
-|                              | body_bb = new_label()                                                  |
-|                              | exit_bb = new_label()                                                  |
-|                              |                                                                        |
-|                              | // entry bb should be separated from previous code.                    |
-|                              | create_jump(entry_bb, basic_block);                                    |
-|                              | // while condition                                                     |
-|                              | cond_value = translate_expr(Expr, sym_table, basic_block);             |
-|                              | create_branch(cond, body_bb, exit_bb, entry_bb);                       |
-|                              |                                                                        |
-|                              | // body, after body, jump back to entry.                               |
-|                              | translate_stmt(Stmt, body_bb);                                         |
-|                              | create_jump(entry_bb, body_bb);                                        |
-|                              |                                                                        |
-|                              | // control flow continues in `exit`                                    |
-|                              | return exit_bb;                                                        |
-+------------------------------+------------------------------------------------------------------------+
-</div>
+<table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Stmt</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Expr</code></td>
+<td><div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>translate_expr<span class="op">(</span>expr<span class="op">,</span> sym_table<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> basic_block<span class="op">;</span></span></code></pre></div></td>
+</tr>
+<tr class="even">
+<td><code>ID = Expr</code></td>
+<td><div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>addr_of_value <span class="op">=</span> lookup<span class="op">(</span>sym_table<span class="op">,</span> ID<span class="op">);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>create_store<span class="op">(</span>result<span class="op">,</span> addr_of_value<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> basic_block<span class="op">;</span></span></code></pre></div></td>
+</tr>
+<tr class="odd">
+<td><code>If (Expr) Stmt</code></td>
+<td><div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>exit_basic_block <span class="op">=</span> new_label<span class="op">();</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>true_basic_block <span class="op">=</span> new_label<span class="op">();</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>cond_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>create_branch<span class="op">(</span>cond<span class="op">,</span> true_basic_block<span class="op">,</span> exit_basic_block<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> true_label<span class="op">);</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>create_jmp<span class="op">(</span>exit_basic_block<span class="op">,</span> true_basic_block<span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> exit_basic_block<span class="op">;</span></span></code></pre></div></td>
+</tr>
+<tr class="even">
+<td><code>If (Expr) Stmt1 Else Stmt2</code></td>
+<td><div class="sourceCode" id="cb4"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>exit_basic_block <span class="op">=</span> new_label<span class="op">();</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>true_basic_block <span class="op">=</span> new_label<span class="op">();</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>false_basic_block <span class="op">=</span> new_label<span class="op">();</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>cond_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>create_branch<span class="op">(</span>cond<span class="op">,</span> true_basic_block<span class="op">,</span> false_basic_block<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> true_label<span class="op">);</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>create_jmp<span class="op">(</span>exit_basic_block<span class="op">,</span> true_basic_block<span class="op">);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> false_label<span class="op">);</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>create_jmp<span class="op">(</span>exit_basic_block<span class="op">,</span> false_basic_block<span class="op">);</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> exit_basic_block<span class="op">;</span></span></code></pre></div></td>
+</tr>
+<tr class="odd">
+<td><code>While (Expr) Stmt</code></td>
+<td><div class="sourceCode" id="cb5"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>entry_bb <span class="op">=</span> new_label<span class="op">()</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>body_bb <span class="op">=</span> new_label<span class="op">()</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>exit_bb <span class="op">=</span> new_label<span class="op">()</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>create_jump<span class="op">(</span>entry_bb<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>cond_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> basic_block<span class="op">);</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>create_branch<span class="op">(</span>cond<span class="op">,</span> body_bb<span class="op">,</span> exit_bb<span class="op">,</span> entry_bb<span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> body_bb<span class="op">);</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>create_jump<span class="op">(</span>entry_bb<span class="op">,</span> body_bb<span class="op">);</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> exit_bb<span class="op">;</span></span></code></pre></div></td>
+</tr>
+</tbody>
+</table>
+
 
 ## 你的任务
 
