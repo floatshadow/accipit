@@ -30,8 +30,9 @@ theme:
         name: Switch to light mode
 nav:
   - Lab 3 中间代码生成: middle-ir-gen.md
-  - Accipit IR 规范: accipit-spec.md
   - SysY 语言规范: sysy-spec.md
+  - Accipit IR 规范: accipit-spec.md
+  - 附录: appendix.md
 
 plugins:
   - search
