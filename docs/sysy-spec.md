@@ -6,7 +6,7 @@ SysY语言是[全国大学生计算机系统能力大赛](https://compiler.educg
 本实验所使用的 SysY 语言和官方定义略有不同. **我们对SysY语言做了一些修改**, 具体如下: 
 
 - 删除了 `float` 类型, 即不需要实现浮点数类型. 
-- 增加了 `bool` 类型, 且不支持 `bool` 类型和 `int` 类型之间的隐式转换. 
+- 删除了 `ConstDecl`，即不需要实现常量声明。同时数组仅支持整数字面量声明维度。
 - 删除了 `InitVal` 的嵌套, 即不需要实现数组的初始化.
 - 删除了十进制之外的整数字面量.
 
@@ -24,22 +24,19 @@ SysY 语言的文法表示如下, `CompUnit` 为开始符号:
 ```ebnf
 CompUnit      ::= [CompUnit] (Decl | FuncDef);
 
-BType         ::= "int" ｜ "bool";
-Decl          ::= ConstDecl | VarDecl;
-ConstDecl     ::= "const" BType ConstDef {"," ConstDef} ";";
-ConstDef      ::= IDENT "=" ConstInitVal
-                | IDENT "[" ConstExp "]" {"[" ConstExp "]"};
-ConstInitVal  ::= ConstExp;
+BType         ::= "int";
+Decl          ::= VarDecl;
+
 
 VarDecl       ::= BType VarDef {"," VarDef} ";";
 VarDef        ::= IDENT "=" InitVal
-                | IDENT "[" ConstExp "]" {"[" ConstExp "]"};
+                | IDENT "[" INT_CONST "]" {"[" INT_CONST "]"};
 InitVal       ::= Exp;
 
 FuncDef       ::= FuncType IDENT "(" [FuncFParams] ")" Block;
-FuncType      ::= "void" | "int" | "bool";
+FuncType      ::= "void" | "int";
 FuncFParams   ::= FuncFParam {"," FuncFParam};
-FuncFParam    ::= BType IDENT ["[" "]" {"[" ConstExp "]"}];
+FuncFParam    ::= BType IDENT ["[" "]" {"[" INT_CONST "]"}];
 
 Block         ::= "{" {BlockItem} "}";
 BlockItem     ::= Decl | Stmt;
@@ -54,9 +51,8 @@ Stmt          ::= LVal "=" Exp ";"
 
 Exp           ::= LOrExp;
 LVal          ::= IDENT {"[" Exp "]"};
-PrimaryExp    ::= "(" Exp ")" | LVal | Number | Boolean;
+PrimaryExp    ::= "(" Exp ")" | LVal | Number;
 Number        ::= INT_CONST;
-Boolean       ::= "true" | "false"; 
 UnaryExp      ::= PrimaryExp | IDENT "(" [FuncRParams] ")" | UnaryOp UnaryExp;
 UnaryOp       ::= "+" | "-" | "!";
 FuncRParams   ::= Exp {"," Exp};
@@ -68,33 +64,7 @@ RelExp        ::= AddExp | RelExp ("<" | ">" | "<=" | ">=") AddExp;
 EqExp         ::= RelExp | EqExp ("==" | "!=") RelExp;
 LAndExp       ::= EqExp | LAndExp "&&" EqExp;
 LOrExp        ::= LAndExp | LOrExp "||" LAndExp;
-ConstExp      ::= Exp;
 ```
-
-其中, 各符号的含义如下:
-
-| 符号        | 含义          | 符号          | 含义          |
-| ---         | ---           | ---           | ---           |
-| CompUnit    | 编译单元      | Decl          | 声明          |
-| ConstDecl   | 常量声明      | BType         | 基本类型      |
-| ConstDef    | 常数定义      | ConstInitVal  | 常量初值      |
-| VarDecl     | 变量声明      | VarDef        | 变量定义      |
-| InitVal     | 变量初值      | FuncDef       | 函数定义      |
-| FuncType    | 函数类型      | FuncFParams   | 函数形参表    |
-| FuncFParam  | 函数形参      | Block         | 语句块        |
-| BlockItem   | 语句块项      | Stmt          | 语句          |
-| Exp         | 表达式        | LVal          | 左值表达式    |
-| PrimaryExp  | 基本表达式    | Number        | 数值          |
-| UnaryExp    | 一元表达式    | UnaryOp       | 单目运算符    |
-| FuncRParams | 函数实参表    | MulExp        | 乘除模表达式  |
-| AddExp      | 加减表达式    | RelExp        | 关系表达式    |
-| EqExp       | 相等性表达式  | LAndExp       | 逻辑与表达式  |
-| LOrExp      | 逻辑或表达式  | ConstExp      | 常量表达式    |
-
-需要注意的是:
-
-* `Exp`: SysY 中表达式的类型为 `int` 或 `bool` 型. 当 `Exp` 出现在表示条件判断的位置时 (例如 `if` 和 `while`) 需要为 `bool` 类型. 禁止 `int` 和 `bool` 之间的隐式转换, 这点和 C 或原版 SysY 不同. 
-* `ConstExp`: 其中使用的 `IDENT` 必须是常量.
 
 ## SysY 语言的终结符特征
 
@@ -127,7 +97,7 @@ SysY 语言中数值常量可以是整型数 `INT_CONST` (integer-const), 其规
 integer-const       ::= digit { digit };
 ```
 
-数值常量的范围为 $[0, 2^{64} - 1]$, 不包含负号.
+数值常量的范围为 $[0, 2^{31} - 1]$, 不包含负号.
 
 ### 注释
 
@@ -146,48 +116,28 @@ SysY 语言中注释的规范与 C 语言一致, 如下:
 
 ```ebnf
 CompUnit ::= [CompUnit] (Decl | FuncDef);
-Decl ::= ConstDecl | VarDecl;
+Decl ::=  VarDecl;
 ```
 
 1. 一个 SysY 程序由单个文件组成, 文件内容对应 EBNF 表示中的 `CompUnit`. 在该 `CompUnit` 中, 必须存在且仅存在一个标识为 `main`, 无参数, 返回类型为 `int` 的 `FuncDef` (函数定义). `main` 函数是程序的入口点.
 2. `CompUnit` 的顶层变量/常量声明语句 (对应 `Decl`), 函数定义 (对应 `FuncDef`) 都不可以重复定义同名标识符 (`IDENT`), 即便标识符的类型不同也不允许.
 3. `CompUnit` 的变量/常量/函数声明的作用域从该声明处开始, 直到文件结尾.
 
-### 常量定义
-
-```ebnf
-ConstDecl     ::= "const" BType ConstDef {"," ConstDef} ";";
-ConstDef      ::= IDENT "=" ConstInitVal
-                | IDENT "[" ConstExp "]" {"[" ConstExp "]"};
-ConstInitVal  ::= ConstExp;
-```
-
-1. `ConstDef` 用于定义符号常量. `ConstDef` 中的 `IDENT` 为常量的标识符, 在 `IDENT` 后可以是可选的数组维度和各维长度的定义部分, 也可以是 `=` 之后赋初始值.
-2. `ConstDef` 的数组维度和各维长度的定义部分不存在时, 表示定义单个常量. 
-3. `ConstDef` 的数组维度和各维长度的定义部分存在时, 表示定义数组. 其语义和 C 语言一致, 比如 `[2][8/2][1*3]` 表示三维数组, 第一到第三维长度分别为 2, 4 和 3, 每维的下界从 0 开始编号. `ConstDef` 中表示各维长度的 `ConstExp` 都必须能在编译时被求值到非负整数. SysY 在声明数组时各维长度都需要显式给出, 而不允许是未知的.
-4. 当 `ConstDef` 定义的是数组时, `=` 右边的 `ConstInitVal` 表示常量初值. `ConstInitVal` 中的 `ConstExp` 是能在编译时被求值的 `int` 或者 `bool` 型表达式, 其中可以引用已定义的符号常量.
-
-
-> SysY 中 “常量” 的定义和 C 语言中的定义有所区别: SysY 中, 所有的常量必须能在编译时被计算出来; 而 C 语言中的常量仅代表这个量不能被修改.
-<br><br>
-SysY 中的常量有些类似于 C++ 中的 `consteval`, 或 Rust 中的 `const`.
-
 ### 变量定义
 
 ```ebnf
-VarDef ::= IDENT {"[" ConstExp "]"}
-         | IDENT {"[" ConstExp "]"} "=" InitVal;
+VarDef ::= IDENT {"[" INT_CONST "]"}
+         | IDENT {"[" INT_CONST "]"} "=" InitVal;
 ```
 
 1. `VarDef` 用于定义变量. 当不含有 `=` 和初始值时, 其运行时实际初值未定义.
-2. `VarDef` 的数组维度和各维长度的定义部分不存在时, 表示定义单个变量; 存在时, 和 `ConstDef` 类似, 表示定义多维数组. (参见 `ConstDef` 的第 2/3 点)
-3. 当 `VarDef` 含有 `=` 和初始值时, `=` 右边的 `InitVal` 和 `CostInitVal` 的结构要求相同, 唯一的不同是 `ConstInitVal` 中的表达式是 `ConstExp` 常量表达式, 而 `InitVal` 中的表达式可以是当前上下文合法的任何 `Exp`.
-4. `VarDef` 中表示各维长度的 `ConstExp` 必须能被求值到非负整数.
+2. `VarDef` 的数组维度和各维长度的定义部分不存在时, 表示定义单个变量; 存在时, 表示定义多维数组
+
 
 ### 函数形参与实参
 
 ```ebnf
-FuncFParam ::= BType IDENT ["[" "]" {"[" ConstExp "]"}];
+FuncFParam ::= BType IDENT ["[" "]" {"[" INT_CONST "]"}];
 FuncRParams ::= Exp {"," Exp};
 ```
 
@@ -250,12 +200,8 @@ Exp ::= LOrExp;
 ...
 ```
 
-1. `Exp`: SysY 中表达式的类型为 `int` 或 `bool` 型. 当 `Exp` 出现在表示条件判断的位置时 (例如 `if` 和 `while`) 需要为 `bool` 类型. 
-2. 禁止 `int` 和 `bool` 之间的隐式转换, 这点和 C 或原版 SysY 不同.
-3. 对于 `||` 和 `&&`, 其左右操作数必须为 `bool` 类型. 上述两种表达式**不满足** C 语言中的短路求值规则.
-4. 对于 `!` 运算符, 其操作数必须为 `bool` 类型, 其余操作符的操作数必须为 `int` 类型.
+1. `Exp` 在 SysY 中代表 `int` 型表达式. 当 `Exp` 出现在表示条件判断的位置时 (例如 `if` 和 `while`), 表达式值为 0 时为假, 非 0 时为真.
+2. 对于 `LOrExp`, 当其左右操作数有任意一个非 0 时, 表达式的值为 1, 否则为 0; 对于 `LAndExp`, 当其左右操作数有任意一个为 0 时, 表达式的值为 0, 否则为 1. 上述两种表达式均满足 C 语言中的短路求值规则.
 3. `LVal` 必须是当前作用域内, 该 `Exp` 语句之前曾定义过的变量或常量. 赋值号左边的 `LVal` 必须是变量.
 4. 函数调用形式是 `IDENT "(" FuncRParams ")"`, 其中的 `FuncRParams` 表示实际参数. 实际参数的类型和个数必须与 `IDENT` 对应的函数定义的形参完全匹配.
 5. SysY 中算符的优先级与结合性与 C 语言一致, 上一节定义的 SysY 文法中已体现了优先级与结合性的定义.
-
-> 这种禁止不同类型间隐式转换的特性一般被称为**强类型**. 这里规定 `if` 和 `while` 的条件表达式类型必须为 `bool` 类型并禁止 `int` 和 `bool` 类型的隐式转换的设计和 `rust` 相同, `rust` 就是一种强类型的语言. 
