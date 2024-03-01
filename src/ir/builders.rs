@@ -62,52 +62,39 @@ impl IRBuilder {
         }
     }
 
-    pub fn get_value_ref(&self, name: &str) -> ValueRef {
+    pub fn get_value_ref(&self, name: &str) -> Option<ValueRef> {
         self.func
             .as_ref()
             .unwrap()
             .local_string_value_map
             .get(name)
-            .unwrap()
-            .clone()
+            .cloned()
     }
 
-    pub fn get_block_ref(&self, name: &str) -> BlockRef {
+    pub fn get_block_ref(&self, name: &str) -> Option<BlockRef> {
         self.func
             .as_ref()
             .unwrap()
             .local_string_bb_map
             .get(name)
-            .unwrap()
-            .clone()
+            .cloned()
     }
 
-    /* This function is only for create a phantom basic block,
-     * which is used as the destinations of terminator.
-     * The actual basic block will be parsed later and fixup.
-     */
-    pub fn get_or_insert_block(&mut self, name: String) -> BlockRef {
-        let possible_bb = self.func
-            .as_ref()
-            .unwrap()
-            .local_string_bb_map
-            .get(&name);
-        match possible_bb {
-            Some(bb_ref) => bb_ref.clone(),
-            None => {
-                let mut phantom_bb = BasicBlock::new();
-                phantom_bb.set_name(Some(name));
-                self.insert_basic_block_symbol(phantom_bb)
-            }
-        }
-
-    }
-
-    fn insert_instruction(&mut self, value_ref: ValueRef) {
+    fn get_current_function_data_mut(&mut self) -> &mut Function {
         let state = self.func
             .as_mut()
-            .unwrap();
-        let working_bb = state.position.unwrap();
+            .expect("IR builder has no working function");
+        self.module
+            .get_function_mut(state.current_function)
+    }
+
+    fn get_current_block_data_mut(&mut self) -> &mut BasicBlock {
+        let state = self.func
+            .as_mut()
+            .expect("IR builder has no working function");
+        let working_bb = state
+            .position
+            .expect("IR builder has no working basic block");
         let current_function = self.module
             .func_ctx
             .get_mut(state.current_function)
@@ -115,15 +102,57 @@ impl IRBuilder {
         current_function.blocks_ctx
             .get_mut(working_bb)
             .unwrap()
-            .instrs
-            .push(value_ref);
     }
 
-    /* get the handler of value and update local symbol value map  */
-    fn insert_local_symbol(&mut self, value: Value) -> ValueRef {
-        // println!("insert {}", value.name.as_ref().unwrap());
-        let handler = self.insert_value_inner(value.clone());
-        match value.name {
+    /// This function is only for create a placeholder basic block,
+    /// which is used as the destinations of terminator.
+    /// The created basic block will NOT be appended to basic block list,
+    /// but insert into symbol map as a placeholder.
+    /// The actual basic block will be parsed later and fixup.
+    pub fn get_or_insert_placeholder_block_ref(&mut self, name: &str) -> BlockRef {
+        let possible_bb = self.func
+            .as_ref()
+            .unwrap()
+            .local_string_bb_map
+            .get(name)
+            .cloned();
+        match possible_bb {
+            Some(bb_ref) => bb_ref,
+            None => {
+                let mut placeholder_bb = BasicBlock::new();
+                placeholder_bb.set_name(Some(name.into()));
+                // only insert symbol not push into the function structure.
+                let curruent_function = self.get_current_function_data_mut();
+                let handler = curruent_function.insert_dangling_basic_block(placeholder_bb);
+                self.func
+                    .as_mut()
+                    .expect("builder has no working function")
+                    .local_string_bb_map
+                    .insert(name.into(), handler);
+                handler
+            }
+        }
+
+    }
+
+    pub fn insert_literal_value(&mut self, value: Value) -> ValueRef {
+        self.module.insert_value(value)
+    }
+
+    fn insert_value(&mut self, value: Value) -> ValueRef {
+        self.module.insert_value(value)
+    }
+
+    fn append_basic_block(&mut self, bb: BasicBlock) -> BlockRef {
+        let current_function = self.get_current_function_data_mut();
+        current_function.append_basic_block(bb)
+    }
+
+    /// get the handler of value and update local symbol value map
+    fn insert_local_value_symbol(&mut self, value: Value) -> ValueRef {
+        let value_name = value.name.clone();
+        let handler = self.insert_value(value);
+        match value_name {
             Some(name) => {
                 self.func
                     .as_mut()
@@ -136,9 +165,11 @@ impl IRBuilder {
         }
     }
 
-    fn insert_basic_block_symbol(&mut self, bb: BasicBlock) -> BlockRef {
-        let handler = self.insert_basic_block_inner(bb.clone());
-        match bb.name {
+    /// get the handler of basic block and update local symbol value map
+    fn append_basic_block_symbol(&mut self, bb: BasicBlock) -> BlockRef {
+        let bb_name = bb.name.clone();
+        let handler = self.append_basic_block(bb.clone());
+        match bb_name {
             Some(name) => {
                 self.func
                     .as_mut()
@@ -151,32 +182,17 @@ impl IRBuilder {
         }
     }
 
-    pub fn insert_value_inner(&mut self, value: Value) -> ValueRef {
-        self.module
-            .value_ctx
-            .insert(value)
+    fn insert_instruction_symbol(&mut self, instr: Value) -> ValueRef {
+        let handler = self.insert_local_value_symbol(instr);
+        let working_bb = self.get_current_block_data_mut();
+        working_bb.insert_instr_before_terminator(handler);
+        handler
     }
 
     pub fn get_value(&self, value_ref: ValueRef) -> Value {
-        self.module
-            .value_ctx
-            .get(value_ref)
-            .unwrap()
-            .clone()
+        self.module.get_value(value_ref).clone()
     }
 
-    fn insert_basic_block_inner(&mut self, bb: BasicBlock) -> BlockRef {
-        let state = self.func
-            .as_mut()
-            .unwrap();
-        let current_function = self.module
-            .func_ctx
-            .get_mut(state.current_function)
-            .unwrap();        
-        current_function
-            .blocks_ctx
-            .insert(bb)
-    }
 
     pub fn emit_function(&mut self, 
         name: String, 
@@ -196,7 +212,7 @@ impl IRBuilder {
         
         let args_value_ref = params
             .iter()
-            .map(| value | self.insert_value_inner(value.clone()))
+            .map(| value | self.insert_value(value.clone()))
             .collect::<Vec<_>>();
 
         let local_name_ctx = args_value_ref
@@ -223,9 +239,7 @@ impl IRBuilder {
             blocks_ctx: SlotMap::with_key()
         };
 
-        let func_ref = self.module.func_ctx.insert(function);
-        self.module.funcs.push(func_ref);
-        self.module.string_func_map.insert(name, func_ref);
+        let func_ref = self.module.append_function(function);
 
         self.func = Some(FunctionEmitState {
             local_string_value_map: local_name_ctx,
@@ -246,20 +260,30 @@ impl IRBuilder {
         state.position = Some(bb);
     }
 
-    /* create an empty basic block */
+    /// create an empty basic block or push back created dangling basic block created.
     pub fn emit_basic_block(&mut self, name: Option<String>) -> BlockRef {
-        let state = self.func
-            .as_mut()
-            .expect("builder has no working function");
-        let mut new_bb = BasicBlock::new();
-        new_bb.set_name(name);
-        let current_function = self.module
-            .func_ctx
-            .get_mut(state.current_function)
-            .unwrap();
-        let new_bb_ref = current_function.blocks_ctx.insert(new_bb);
-        current_function.blocks.push(new_bb_ref);
-        new_bb_ref
+
+        match name {
+            Some(bb_name) => {
+                if let Some(dangling_bb_ref) = self.get_block_ref(&bb_name) {
+                    println!("find dangling basic block {}\n", bb_name);
+                    let current_function = self.get_current_function_data_mut();
+                    current_function.append_back_dangling_basic_block(dangling_bb_ref);
+                    dangling_bb_ref
+                } else {
+                    let current_function = self.get_current_function_data_mut();
+                    let mut new_bb = BasicBlock::new();
+                    new_bb.set_name(Some(bb_name));
+                    current_function.append_basic_block(new_bb)
+                }
+            },
+            None => {
+                let current_function = self.get_current_function_data_mut();
+                let mut new_bb = BasicBlock::new();
+                new_bb.set_name(name);
+                current_function.append_basic_block(new_bb)
+            }
+        }
     }
 
     pub fn emit_numeric_binary_expr(
@@ -301,9 +325,7 @@ impl IRBuilder {
 
         let mut binexpr = values::Binary::new(result_ty, op, lhs, rhs);
         binexpr.set_name(inner_name);
-        let handler = self.insert_local_symbol(binexpr);
-        self.insert_instruction(handler);
-        handler
+        self.insert_instruction_symbol(binexpr)
 
     }
 

@@ -164,10 +164,15 @@ impl<'a, 'b: 'a> Parser {
     ) -> IResult<Tokens<'a>, ValueRef> {
         alt((
             map(parse_symbol, | (name, _) | {
-                builder.borrow().get_value_ref(name)
+                builder
+                    .borrow()
+                    .get_value_ref(name)
+                    .unwrap()
             }),
             map(parse_literal,  | value: Value| {
-                builder.borrow_mut().insert_value_inner(value)
+                builder
+                    .borrow_mut()
+                    .insert_literal_value(value)
             })
         ))(input)
     }
@@ -213,8 +218,12 @@ impl<'a, 'b: 'a> Parser {
             token(Token::TkJmp),
             preceded(token(Token::KwLabel), identifier)
         )(input)?;
-        let dest_ref = builder.borrow().get_block_ref(dest);
-        builder.borrow_mut().fixup_terminator_jump(dest_ref);
+        let dest_ref = builder
+            .borrow_mut()
+            .get_or_insert_placeholder_block_ref(dest);
+        builder
+            .borrow_mut()
+            .fixup_terminator_jump(dest_ref);
         Ok((input, ()))
     }
 
@@ -233,9 +242,15 @@ impl<'a, 'b: 'a> Parser {
                 )
             ))
         )(input)?;
-        let true_ref = builder.borrow().get_block_ref(true_label);
-        let false_ref = builder.borrow().get_block_ref(false_label);
-        builder.borrow_mut().fixup_terminator_branch(cond, true_ref, false_ref);
+        let true_ref = builder
+            .borrow_mut()
+            .get_or_insert_placeholder_block_ref(true_label);
+        let false_ref = builder
+            .borrow_mut()
+            .get_or_insert_placeholder_block_ref(false_label);
+        builder
+            .borrow_mut()
+            .fixup_terminator_branch(cond, true_ref, false_ref);
         Ok((input, ()))
     }
 
@@ -352,7 +367,11 @@ impl<'a, 'b: 'a> Parser {
         let (input, _) = many0(
             | input: Tokens<'a> | Parser::parse_function(input, builder.clone())
         )(input)?;
-        Ok((input, builder.borrow().module.clone()))
+        if input.input_len() > 0 {
+            Err(Err::Failure(Error::new(input, ErrorKind::Tag)))
+        } else {
+            Ok((input, builder.borrow().module.clone()))
+        }
     }
 }
 

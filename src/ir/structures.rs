@@ -2,7 +2,7 @@ use std::fmt;
 use std::error::Error;
 use std::collections::HashMap;
 
-use slotmap::{SlotMap, new_key_type};
+use slotmap::{basic, new_key_type, SlotMap};
 use itertools::Itertools;
 
 use super::values;
@@ -125,6 +125,32 @@ impl Function {
     pub fn get_basic_block(&self, bb_ref: BlockRef) -> &BasicBlock {
         self.blocks_ctx.get(bb_ref).unwrap()
     }
+
+    pub fn get_basic_block_mut(&mut self, bb_ref: BlockRef) -> &mut BasicBlock {
+        self.blocks_ctx.get_mut(bb_ref).unwrap()
+    }
+
+    pub fn insert_dangling_basic_block(&mut self, bb: BasicBlock) -> BlockRef {
+        let handler = self.blocks_ctx.insert(bb);
+        handler
+    }
+
+    pub fn append_back_dangling_basic_block(&mut self, bb: BlockRef) -> BlockRef {
+        assert!(
+            self.blocks_ctx.contains_key(bb),
+            "try to append a dangling basic block to the wrong function `{}`",
+            self.name
+        );
+        self.blocks.push(bb);
+        bb
+    }
+
+    /// insert a basic block into function.
+    pub fn append_basic_block(&mut self, bb: BasicBlock) -> BlockRef {
+        let handler = self.insert_dangling_basic_block(bb);
+        self.blocks.push(handler);
+        handler
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -151,8 +177,29 @@ impl Module {
         }
     }
 
+    pub fn insert_value(&mut self, value: Value) -> ValueRef {
+        self.value_ctx
+            .insert(value)
+    }
+
+    pub fn append_function(&mut self, function: Function) -> FunctionRef {
+        let function_name = function.name.clone();
+        let handler = self.func_ctx.insert(function);
+        assert!(
+            self.string_func_map.insert(function_name.clone(), handler).is_none(),
+            "try to insert duplicated function `{}`",
+            function_name.clone()
+        );
+        self.funcs.push(handler);
+        handler
+    }
+
     pub fn get_value(&self, value_ref: ValueRef) -> &Value {
         self.value_ctx.get(value_ref).unwrap()
+    }
+
+    pub fn get_value_mut(&mut self, value_ref: ValueRef) -> &mut Value {
+        self.value_ctx.get_mut(value_ref).unwrap()
     }
 
     pub fn get_value_type(&self, value_ref: ValueRef) -> Type {
@@ -164,6 +211,10 @@ impl Module {
             .get(name)
             .unwrap()
             .clone()
+    }
+
+    pub fn get_function_mut(&mut self, func_ref: FunctionRef) -> &mut Function {
+        self.func_ctx.get_mut(func_ref).unwrap()
     }
 
     pub fn get_function(&self, func_ref: FunctionRef) -> &Function {
