@@ -26,3 +26,15 @@ fn %add_but_unused_bb(#a: i64, #b: i64) -> i64 {
     let %5: i64 = add #4, 1
     ret %5
 }
+
+
+fn %add_but_direct_link_bb(#a: i64, #b: i64) -> i64 {
+%3:
+    let %4 = add #a, #b
+    jmp label %6
+%dead_bb:
+    let %5: i64 = add #4, 1
+    ret %5
+%6:
+    ret %4
+}
