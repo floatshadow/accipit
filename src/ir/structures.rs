@@ -62,6 +62,10 @@ impl Value {
                 ValueKind::Binary(..) | ValueKind::Offset(..) | ValueKind::FnCall(..) | 
                 ValueKind::Alloca(..) | ValueKind::Load(..) | ValueKind::Store(..))
     }
+
+    pub fn is_constant_value(&self) -> bool {
+        matches!(self.kind, ValueKind::ConstantInt(..) | ValueKind::ConstantBool(..) | ValueKind::ConstantUnit(..))
+    }
 }
 
 impl fmt::Display for Value {
@@ -264,6 +268,39 @@ impl fmt::Display for Module {
                                 let rhs = self.get_value(inner.rhs);
                                 write!(f, "  let {} = {} {}, {}\n",
                                         value, inner.op, lhs, rhs)
+                            },
+                            ValueKind::Load(inner) => {
+                                let addr = self.get_value(inner.addr);
+                                write!(f, "  let {} = load {}\n",
+                                        value, addr)
+                            },
+                            ValueKind::Store(inner) => {
+                                let stored = self.get_value(inner.value);
+                                let addr = self.get_value(inner.addr);
+                                write!(f, "  let {} = store {}, {}\n",
+                                        value, stored, addr)
+                            },
+                            ValueKind::FnCall(inner) => {
+                                let callee = inner.callee.clone();
+                                let args = inner.args.iter().cloned().map(| argref| self.get_value(argref));
+                                write!(f, "  let {} = call {}, {}\n",
+                                        value, callee, args.format(", "))
+                            },
+                            ValueKind::Offset(inner) => {
+                                let elem_type = inner.elem_type.clone();
+                                let addr = self.get_value(inner.base_addr);
+                                let indices = inner.index.iter().cloned().map(| argref| self.get_value(argref));
+                                let bounds = inner.bounds.clone();
+                                write!(f, "  let {} = offset {}, {}, {}\n",
+                                        value, elem_type, addr,
+                                        indices.into_iter().zip(bounds.into_iter())
+                                        .format_with(", ", | (index, bound), f | {
+                                            match bound {
+                                                Some(bound) => f(&format_args!("[{} < {}]", index, bound)),
+                                                None => f(&format_args!("[{} < none]", index))
+                                            }
+                                        })
+                                    )
                             }
                             _ => panic!("invalid instruction {}", value)
                         }?;

@@ -27,7 +27,6 @@ fn %add_but_unused_bb(#a: i64, #b: i64) -> i64 {
     ret %5
 }
 
-
 fn %add_but_direct_link_bb(#a: i64, #b: i64) -> i64 {
 %3:
     let %4 = add #a, #b
@@ -37,4 +36,31 @@ fn %add_but_direct_link_bb(#a: i64, #b: i64) -> i64 {
     ret %5
 %6:
     ret %4
+}
+
+fn %add_with_load_store_alloca(#1: i64, #2: i64) -> i64 {
+%entry:
+    let %arg.1.addr = alloca i64, 1
+    let %arg.2.addr = alloca i64, 1
+    let %3 = store #1, %arg.1.addr
+    let %4 = store #2, %arg.2.addr
+    jmp label %6
+%6:
+    let %7 = load %arg.1.addr
+    let %8 = load %arg.2.addr
+    let %9: i64 = add %7, %8
+    ret %9
+}
+
+fn %load_store_alloca_offset(#1: i64, #2: i64) -> i64 {
+%entry:
+    let %arg.array = alloca i64, 6
+    let %arg.1.addr = offset i64, %arg.array, [0 < 2], [1 < 3]
+    let %arg.2.addr = offset i64, %arg.array, [1 < 2], [2 < 3]
+    let %3 = store #1, %arg.1.addr
+    let %4 = store #2, %arg.2.addr
+    jmp label %6
+%6:
+    let %8 = load %arg.2.addr
+    ret %8
 }

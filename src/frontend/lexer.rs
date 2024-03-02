@@ -194,18 +194,21 @@ impl Lexer {
     }
 
     pub fn lex(input: &str) -> IResult<&str, Vec<Token>> {
-        many0(alt((
-            // `let` `le` has name collision.
-            lex_keyword,
-            lex_literal,
-            lex_identifier,
-            lex_primitive_type,
-            lex_delimiter,
-            lex_binary_operator,
-            lex_offset_operator,
-            lex_memory_operator,
-            lex_function_cal_operator,
-            lex_terminator_operator,
+        all_consuming(
+            many1(terminated(alt((
+                // `let` `le` has name collision.
+                lex_keyword,
+                lex_literal,
+                lex_identifier,
+                lex_primitive_type,
+                lex_delimiter,
+                lex_binary_operator,
+                lex_offset_operator,
+                lex_memory_operator,
+                lex_function_cal_operator,
+                lex_terminator_operator,
+            )),
+            filter_whitespace_and_comment,
         )))(input)
     }
 }

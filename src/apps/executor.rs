@@ -1,7 +1,7 @@
 use core::fmt;
 use std::collections::HashMap;
 
-use crate::ir::{structures::*, values};
+use crate::ir::{structures::*, values::{self, ConstantInt}};
 
 use slotmap::{SlotMap, SecondaryMap};
 
@@ -16,6 +16,8 @@ pub enum ExecutionError {
     NotImplemented(String),
     UnexpectedIncompatibleVal(Val),
     UseUndefinedValue,
+    LexerError,
+    ParseError
 }
 
 /// Trace the source of pointer values,
@@ -290,7 +292,7 @@ pub fn single_step(
             // compute accumulated offset
             let last_dim_subdim = [Some(1usize)];
             let total_offset: usize = indices
-                .into_iter().zip(inner.bounds.iter().cloned().chain(last_dim_subdim.into_iter()))
+                .into_iter().zip(inner.bounds.iter().cloned().skip(1).chain(last_dim_subdim.into_iter()))
                 .fold(0usize, | acc, (index, next_dim_bound) | {
                     acc + index * next_dim_bound.expect("expected bounded dimension in `Offset`")
                 });
@@ -445,6 +447,20 @@ pub fn run_on_module(
     entry_fn: &str,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
+    // set all constant value
+    module.value_ctx
+        .iter()
+        .for_each(| (value, value_data) | {
+            match &value_data.kind {
+                ValueKind::ConstantInt(inner) =>
+                    env.set_val(value, Val::Integer(inner.value)),
+                ValueKind::ConstantBool(inner) =>
+                    env.set_val(value, Val::Bool(inner.value)),
+                ValueKind::ConstantUnit(_) =>
+                    env.set_val(value, Val::Unit),
+                _ => None,
+            };
+        });
     let function = module.get_function_ref(entry_fn);
     run_on_function(env, module, function, args)
 }

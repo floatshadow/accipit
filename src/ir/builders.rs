@@ -364,7 +364,7 @@ impl IRBuilder {
             inner_name
         );
 
-        let mut offset = values::Offset::new_value(addr_ty, addr, index, bound);
+        let mut offset = values::Offset::new_value(base_type, addr, index, bound);
         offset.set_name(inner_name);
         self.insert_instruction_symbol(offset)
     }

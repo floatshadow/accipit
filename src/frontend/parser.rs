@@ -1,12 +1,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use nom::{
-    branch::alt, bytes::complete::{is_not, tag, take, take_until}, character::complete::{
-        alpha0, alpha1, 
-        alphanumeric0, alphanumeric1, 
-        char, digit0, digit1, 
-        multispace0, multispace1
-    }, combinator::{all_consuming, map, map_res, opt, peek, recognize, value}, error::{Error, ErrorKind, ParseError}, multi::{fold_many1, many0, many0_count, many1, many1_count, separated_list0}, sequence::{delimited, pair, preceded, separated_pair, terminated, tuple}, Compare, CompareResult, Err, IResult, InputIter, InputLength, InputTake, Needed, Slice
+    branch::alt,
+    bytes::complete::take,
+    combinator::{all_consuming, map, opt, peek, value},
+    error::{context, Error, ErrorKind, ParseError, VerboseError},
+    multi::{fold_many1, many0, many0_count, many1, many1_count, separated_list0},
+    sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
+    Compare, CompareResult, Err, InputIter, InputLength, InputTake
 };
 
 use crate::ir::{
@@ -15,6 +16,8 @@ use crate::ir::{
 
 use super::{lexer::Lexer, token};
 use super::token::{Token, Tokens};
+
+pub type IResult<I, O, E=nom::error::VerboseError<I>> = Result<(I, O), nom::Err<E>>;
 
 
 fn token<'a, Input, Error: ParseError<Input>>(
@@ -44,7 +47,7 @@ fn identifier(input: Tokens) -> IResult<Tokens, &str> {
             // println!("identifier {}, now token: {:?}", id, input);
             Ok((input, id))
         },
-        _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+        _ => Err(Err::Error(VerboseError::from_error_kind(input, ErrorKind::Tag)))
     }
 }
 
@@ -52,7 +55,7 @@ fn i64_literal(input: Tokens) -> IResult<Tokens, i64> {
     let (input, tk) = take(1usize)(input)?;
     match tk.iter_elements().next().unwrap() {
         Token::LtInt64(value) => Ok((input, value.clone())),
-        _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+        _ => Err(Err::Error(VerboseError::from_error_kind(input, ErrorKind::Tag)))
     }
 }
 
@@ -60,7 +63,7 @@ fn i1_literal(input: Tokens) -> IResult<Tokens, bool> {
     let (input, tk) = take(1usize)(input)?;
     match tk.iter_elements().next().unwrap() {
         Token::LtInt1(value) => Ok((input, value.clone())),
-        _ => Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+        _ => Err(Err::Error(VerboseError::from_error_kind(input, ErrorKind::Tag)))
     }
 }
 
@@ -167,7 +170,7 @@ impl<'a, 'b: 'a> Parser {
                 builder
                     .borrow()
                     .get_value_ref(name)
-                    .unwrap()
+                    .expect("undefined symbol")
             }),
             map(parse_literal,  | value: Value| {
                 builder
@@ -222,6 +225,119 @@ impl<'a, 'b: 'a> Parser {
             anno_ty
         )))
     }
+    
+    fn parse_load(
+        input: Tokens<'a>,
+        builder: Rc<RefCell<IRBuilder>>
+    ) -> IResult<Tokens<'a>, ValueRef> {
+        let (input,(name, anno_ty)) =
+            delimited(token(Token::KwLet), parse_symbol, token(Token::Equal))(input)?;
+        
+        let (input, addr) = preceded(
+            token(Token::TkLoad),
+            | token: Tokens<'a> | Parser::parse_value(token, builder.clone())
+        )(input)?;
+
+        Ok((input, builder.borrow_mut().emit_load(
+            Some(String::from(name)),
+            addr,
+            anno_ty
+        )))
+    }
+
+    fn parse_store(
+        input: Tokens<'a>,
+        builder: Rc<RefCell<IRBuilder>>
+    ) -> IResult<Tokens<'a>, ValueRef> {
+        let (input,(name, anno_ty)) =
+            delimited(token(Token::KwLet), parse_symbol, token(Token::Equal))(input)?;
+        
+        let (input, (stored, addr)) = preceded(
+            token(Token::TkStore),
+            separated_pair(
+                | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
+                token(Token::Comma),
+                | token: Tokens<'a> | Parser::parse_value(token, builder.clone())
+        ))(input)?;
+
+        Ok((input, builder.borrow_mut().emit_store(
+            Some(String::from(name)),
+            stored,
+            addr,
+            anno_ty
+        )))
+    }
+
+    fn parse_offset(
+        input: Tokens<'a>,
+        builder: Rc<RefCell<IRBuilder>>
+    ) -> IResult<Tokens<'a>, ValueRef> {
+        let (input,(name, anno_ty)) =
+            delimited(token(Token::KwLet), parse_symbol, token(Token::Equal))(input)?;
+
+        let parse_bounds = alt((
+            value(None, token(Token::LtNone)),
+            map(i64_literal, | lit | Some(usize::try_from(lit).expect("expect non-negative offset bound")))
+        ));
+
+        let (input, (base_ty, addr, indices_bounds)) = preceded(
+            token(Token::TkOffset),
+            tuple((
+                parse_type,
+                preceded(
+                    token(Token::Comma),
+                    | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
+                ),
+                many1(
+                    preceded(
+                        token(Token::Comma),
+                        delimited(
+                            token(Token::LBracket),
+                            separated_pair(
+                                | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
+                                token(Token::Less),
+                                parse_bounds),
+                            token(Token::RBracket)
+                        )
+                    )
+                )
+            ))
+        )(input)?;
+
+        Ok((input, builder.borrow_mut().emit_offset(
+            Some(String::from(name)),
+            base_ty,
+            addr,
+            indices_bounds,
+            anno_ty
+        )))
+    }
+
+    fn parse_fncall(
+        input: Tokens<'a>,
+        builder: Rc<RefCell<IRBuilder>>
+    ) -> IResult<Tokens<'a>, ValueRef> {
+        let (input,(name, anno_ty)) =
+            delimited(token(Token::KwLet), parse_symbol, token(Token::Equal))(input)?;
+        
+        let (input, ((callee, _), args)) = preceded(
+            token(Token::TkFnCall),
+                    tuple((
+                        parse_symbol,
+                        separated_list0(
+                            token(Token::Comma),
+                            | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
+                        )
+                    ))
+        )(input)?;
+
+        Ok((input, builder.borrow_mut().emit_function_call(
+            Some(String::from(name)),
+            String::from(callee),
+            args,
+            anno_ty
+        )))
+    }
 
     fn parse_instruction(
         input: Tokens<'a>,
@@ -229,6 +345,11 @@ impl<'a, 'b: 'a> Parser {
     ) -> IResult<Tokens<'a>, ValueRef> {
         alt((
             | input: Tokens<'a> | Parser::parse_binary_expr(input, builder.clone()),
+            | input: Tokens<'a> | Parser::parse_alloca(input, builder.clone()),
+            | input: Tokens<'a> | Parser::parse_load(input, builder.clone()),
+            | input: Tokens<'a> | Parser::parse_store(input, builder.clone()),
+            | input: Tokens<'a> | Parser::parse_offset(input, builder.clone()),
+            | input: Tokens<'a> | Parser::parse_fncall(input, builder.clone()),
         ))(input)
     }
 
@@ -386,14 +507,11 @@ impl<'a, 'b: 'a> Parser {
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>
     ) -> IResult<Tokens<'a>, Module> {
-        let (input, _) = many0(
+        let (input, _) = all_consuming(many1(
             | input: Tokens<'a> | Parser::parse_function(input, builder.clone())
-        )(input)?;
-        if input.input_len() > 0 {
-            Err(Err::Failure(Error::new(input, ErrorKind::Tag)))
-        } else {
-            Ok((input, builder.borrow().module.clone()))
-        }
+        ))(input)?;
+
+        Ok((input, builder.borrow().module.clone()))
     }
 }
 

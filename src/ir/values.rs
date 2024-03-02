@@ -137,14 +137,15 @@ impl ConstantUnit {
 
 #[derive(Debug, Clone)]
 pub struct Offset {
+    pub elem_type: Type,
     pub base_addr: ValueRef,
     pub index: Vec<ValueRef>,
     pub bounds: Vec<Option<usize>>,
 }
 
 impl Offset {
-    pub fn new_value(ty: Type, base_addr: ValueRef, index: Vec<ValueRef>, bounds: Vec<Option<usize>>) -> Value {
-        Value::new(ty, None, ValueKind::Offset(Self { base_addr, index, bounds }))
+    pub fn new_value(elem_type: Type,  base_addr: ValueRef, index: Vec<ValueRef>, bounds: Vec<Option<usize>>) -> Value {
+        Value::new(Type::get_pointer(elem_type.clone()), None, ValueKind::Offset(Self { elem_type, base_addr, index, bounds }))
     }
 }
 
