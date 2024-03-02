@@ -1,4 +1,5 @@
 use nom::{Compare, CompareResult, InputIter, InputLength, InputTake, Needed, Slice};
+use std::fmt;
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 use std::slice::Iter;
 use std::iter::Enumerate;
@@ -63,6 +64,64 @@ pub enum Token<'a> {
     KwFn,
     KwLet,
     KwLabel,
+    // Recovery
+    Unknown
+}
+
+impl<'a> fmt::Display for Token<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use Token::*;
+        match self {
+            TkIdent(ident) => write!(f, "{}", ident),
+            LtInt64(i64_lit) => write!(f, "{}", i64_lit),
+            LtInt1(i1_lit) => write!(f, "{}", i1_lit),
+            LtNone => write!(f, "none"),
+            LtNull => write!(f, "null"),
+            TyInt64 => write!(f, "i64"),
+            TyInt1 => write!(f, "i1"),
+            TyPtr => write!(f, "ptr"),
+            // Binary operator
+            TkAdd => write!(f, "add"),
+            TkSub => write!(f, "sub"),
+            TkMul => write!(f, "mul"),
+            TkDiv => write!(f, "div"),
+            TkRem => write!(f, "rem"),
+            TkAnd => write!(f, "and"),
+            TkOr => write!(f, "or"),
+            TkXor => write!(f, "xor"),
+            TkLt => write!(f, "lt"),
+            TkGt => write!(f, "gt"),
+            TkLe => write!(f, "le"),
+            TkGe => write!(f, "ge"),
+            TkEq => write!(f, "eq"),
+            TkNe => write!(f, "ne"),
+            TkOffset => write!(f, "offset"),
+            TkAlloca => write!(f, "alloca"),
+            TkLoad => write!(f, "load"),
+            TkStore => write!(f, "store"),
+            TkFnCall => write!(f, "call"),
+            TkJmp => write!(f, "jmp"),
+            TKBranch => write!(f, "br"),
+            TKRet => write!(f, "ret"),
+            LParen => write!(f, "("),
+            RParen => write!(f, ")"),
+            LBrace => write!(f, "{{"),
+            RBrace => write!(f, "}}"),
+            LBracket => write!(f, "["),
+            RBracket => write!(f, "]"),
+            Equal => write!(f, "="),
+            Arrow => write!(f, "->"),
+            Comma => write!(f, ","),
+            Colon => write!(f, ":"),
+            SemiColon => write!(f, ";"),
+            Less => write!(f, "<"),
+            Asterisk => write!(f, "*"),
+            KwFn => write!(f, "fn"),
+            KwLet => write!(f, "let"),
+            KwLabel => write!(f, "label"),
+            Unknown => write!(f, "<unknown>")
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

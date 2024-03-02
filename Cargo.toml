@@ -8,4 +8,6 @@ edition = "2021"
 [dependencies]
 slotmap = "1.0.7"
 nom = "7.1.3"
+chumsky = "1.0.0-alpha.6"
+ariadne = { version = "0.4", features = ["auto-color"] }
 itertools = "0.12.1"

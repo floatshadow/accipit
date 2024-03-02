@@ -8,15 +8,17 @@ use nom::{
         char, digit0, digit1, 
         multispace0, multispace1
     },
-    combinator::{all_consuming, map_res, opt, recognize, value},
+    combinator::{all_consuming, map_res, opt, recognize, value, cut},
     multi::{fold_many1, many0, many0_count, many1, separated_list0}, 
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple}, 
-    Err, IResult
+    Err
 };
 
 use crate::ir::builders::IRBuilder;
 
 use super::token::Token;
+
+pub type IResult<I, O, E=nom::error::VerboseError<I>> = Result<(I, O), nom::Err<E>>;
 
 fn filter_comment(input: &str) -> IResult<&str, ()> {
     alt((
