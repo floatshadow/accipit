@@ -201,6 +201,28 @@ impl<'a, 'b: 'a> Parser {
         )))
     }
 
+    fn parse_alloca(
+        input: Tokens<'a>,
+        builder: Rc<RefCell<IRBuilder>>
+    ) -> IResult<Tokens<'a>, ValueRef> {
+        let (input,(name, anno_ty)) =
+            delimited(token(Token::KwLet), parse_symbol, token(Token::Equal))(input)?;
+        
+        let (input, (base_ty, region_size)) = preceded(
+            token(Token::TkAlloca),
+            separated_pair(
+                parse_type, token(Token::Comma), i64_literal)
+        )(input)?;
+
+        Ok((input, builder.borrow_mut().emit_alloca(
+            Some(String::from(name)),
+            base_ty,
+            usize::try_from(region_size)
+                .expect("expect non-negative integer literal in alloca region size"),
+            anno_ty
+        )))
+    }
+
     fn parse_instruction(
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>,
