@@ -57,7 +57,7 @@ impl IRBuilder {
             unwrap().
             namer;
         match base.as_ref() {
-            Some(given_name) => namer. next_name(&given_name),
+            Some(given_name) => namer.next_name(&given_name),
             None => namer.next_anonymous_name()
         }
     }
@@ -327,6 +327,171 @@ impl IRBuilder {
         binexpr.set_name(inner_name);
         self.insert_instruction_symbol(binexpr)
 
+    }
+
+    pub fn emit_offset(
+        &mut self,
+        name: Option<String>,
+        base_type: Type,
+        addr: ValueRef,
+        indices_bounds: Vec<(ValueRef, Option<usize>)>,
+        annotated_type: Option<Type>,
+    ) -> ValueRef {
+        let inner_name = self.get_unique_name(&name);
+        let addr_ty = self.module.get_value_type(addr);
+        if let Some(check_ty) = annotated_type {
+            assert!(
+                check_ty.eq(&addr_ty),
+                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                addr_ty, inner_name, check_ty
+            );
+        }
+
+        assert!(
+            addr_ty.deref_matches(&base_type),
+            "element type `{}` is not compatible with input pointer in offset `{}`",
+            base_type, inner_name
+        );
+
+        let (index, bound): (Vec<ValueRef>, Vec<Option<usize>>) = indices_bounds
+            .into_iter()
+            .unzip();
+
+        assert!(
+            index.iter().cloned()
+                .all(| index_ref | self.get_value(index_ref).ty.is_integer_type()),
+            "expected integer type index in offset `{}`",
+            inner_name
+        );
+
+        let mut offset = values::Offset::new_value(addr_ty, addr, index, bound);
+        offset.set_name(inner_name);
+        self.insert_instruction_symbol(offset)
+    }
+
+    pub fn emit_alloca(
+        &mut self,
+        name: Option<String>,
+        base_type: Type,
+        region_size: usize,
+        annotated_type: Option<Type>
+    ) -> ValueRef {
+        let inner_name = self.get_unique_name(&name);
+        if let Some(check_ty) = annotated_type {
+            let expected_type = Type::get_pointer(base_type.clone());
+            assert!(
+                check_ty.eq(&expected_type),
+                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                expected_type, inner_name, check_ty
+            );
+        }
+
+        let mut alloca = values::Alloca::new_value(base_type, region_size);
+        alloca.set_name(inner_name);
+        self.insert_instruction_symbol(alloca)
+    }
+
+    pub fn emit_load(
+        &mut self,
+        name: Option<String>,
+        addr: ValueRef,
+        annotated_type: Option<Type>
+    ) -> ValueRef {
+        let inner_name = self.get_unique_name(&name);
+        let addr_ty = self.module.get_value_type(addr);
+        let result_ty = if let Some(check_ty) = annotated_type {
+            assert!(
+                addr_ty.deref_matches(&check_ty),
+                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                addr_ty, inner_name, check_ty
+            );
+            check_ty
+        } else {
+            addr_ty.get_pointer_base_type()
+                .expect("address in `Load` instruction should be pointer type, \
+                or the result type should be explicitly annotated if address is a opaque pointer")
+        };
+
+        let mut load = values::Load::new_value(result_ty, addr);
+        load.set_name(inner_name);
+        self.insert_instruction_symbol(load)
+    }
+
+    pub fn emit_store(
+        &mut self,
+        name: Option<String>,
+        stored_value: ValueRef,
+        addr: ValueRef,
+        annotated_type: Option<Type>
+    ) -> ValueRef {
+        let inner_name = self.get_unique_name(&name);
+        let stored_ty = self.module.get_value_type(stored_value);
+        let addr_ty = self.module.get_value_type(addr);
+        if let Some(check_ty) = annotated_type {
+            assert!(
+                check_ty.is_unit_type(),
+                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                Type::get_unit(), inner_name, check_ty
+            );
+        }
+        assert!(
+            addr_ty.deref_matches(&stored_ty),
+            "in load instruction `{}`,value type `{}` and address type `{}` are incompatible", 
+            inner_name, stored_ty, addr_ty
+        );
+
+        let mut store = values::Store::new_value(stored_value, addr);
+        store.set_name(inner_name);
+        self.insert_instruction_symbol(store)
+    }
+
+    pub fn emit_function_call(
+        &mut self,
+        name: Option<String>,
+        callee: String,
+        args: Vec<ValueRef>,
+        annotated_type: Option<Type>
+    ) -> ValueRef {
+        let inner_name = self.get_unique_name(&name);
+        let funcref = self.module.get_function_ref(&callee);
+        let function = self.module.get_function(funcref);
+        let args_value = args.iter().cloned()
+            .map(| argref | self.get_value(argref))
+            .collect::<Vec<_>>();
+
+        assert!(
+            function.ty.is_function_type(),
+            "expect callee function `{}` function type, but found `{}` type",
+            function.name, function.ty
+        );
+
+        let ret_ty = function.ty.get_function_ret_type().unwrap();
+        let params_ty = function.ty.get_function_params_type().unwrap();
+
+        assert!(
+            params_ty.len() == args_value.len(),
+            "function call `{}` has different number of arguments with function prototype `{}`",
+            inner_name, callee
+        );
+
+        assert!(
+            params_ty.iter().zip(args_value.iter())
+            .all( | (param_ty, arg_value) | param_ty.eq(&arg_value.ty)),
+            "function call `{}` has different argument type with function prototyp `{}`",
+            inner_name, callee
+        );
+
+        if let Some(check_ty) = annotated_type {
+            assert!(
+                check_ty.eq(&ret_ty),
+                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                ret_ty, inner_name, check_ty
+            );
+        }
+
+        let mut call = values::FunctionCall::new_value(ret_ty, callee, args);
+        call.set_name(inner_name);
+        self.insert_instruction_symbol(call)
     }
 
     pub fn fixup_terminator_jump(&mut self, dest: BlockRef) {

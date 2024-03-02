@@ -135,4 +135,12 @@ impl Type {
     pub fn is_function_type(&self) -> bool {
         matches!(self.0.as_ref(), TypeKind::Function(..))
     }
+
+    pub fn deref_matches(&self, pointee_ty: &Type) -> bool {
+        match self.0.as_ref() {
+            TypeKind::OpaquePtr => true,
+            TypeKind::Pointer(base_ty) => base_ty.eq(pointee_ty),
+            _ => false
+        }
+    } 
 }

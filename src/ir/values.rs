@@ -138,8 +138,14 @@ impl ConstantUnit {
 #[derive(Debug, Clone)]
 pub struct Offset {
     pub base_addr: ValueRef,
-    pub bounds: Vec<Option<usize>>,
     pub index: Vec<ValueRef>,
+    pub bounds: Vec<Option<usize>>,
+}
+
+impl Offset {
+    pub fn new_value(ty: Type, base_addr: ValueRef, index: Vec<ValueRef>, bounds: Vec<Option<usize>>) -> Value {
+        Value::new(ty, None, ValueKind::Offset(Self { base_addr, index, bounds }))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -151,10 +157,22 @@ pub struct FunctionCall {
     pub args: Vec<ValueRef>
 }
 
+impl FunctionCall {
+    pub fn new_value(ret_ty: Type, callee: String, args: Vec<ValueRef>) -> Value {
+        Value::new(ret_ty, None, ValueKind::FnCall(Self { callee, args }))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Alloca {
     pub elem_type: Type,
     pub num_elements: usize
+}
+
+impl Alloca {
+    pub fn new_value(elem_type: Type, num_elements: usize) -> Value {
+        Value::new(Type::get_pointer(elem_type.clone()), None, ValueKind::Alloca(Self { elem_type, num_elements}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -162,10 +180,22 @@ pub struct Load {
     pub addr: ValueRef
 }
 
+impl Load {
+    pub fn new_value(elem_ty: Type, addr: ValueRef) -> Value {
+        Value::new(elem_ty, None, ValueKind::Load(Self { addr }))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Store {
+    pub value: ValueRef,
     pub addr: ValueRef,
-    pub value: ValueRef
+}
+
+impl Store {
+    pub fn new_value(value: ValueRef, addr: ValueRef) -> Value {
+        Value::new(Type::get_unit(), None, ValueKind::Store(Self { value, addr }))
+    }
 }
 
 #[derive(Debug, Clone)]
