@@ -126,10 +126,6 @@ pub fn lexer<'a>() -> impl Parser<'a, &'a str, Vec<Spanned<Token<'a>>>, ParserEr
 
     let comment = single_comment.or(multi_comment);
     
-    let recovery =
-        // filter current unknown token
-        none_of::<&str, &str, ParserError<'a, char>>(" \t\n\r").repeated();
-
     // tokens
     let token = choice((
         keywords,
@@ -144,8 +140,7 @@ pub fn lexer<'a>() -> impl Parser<'a, &'a str, Vec<Spanned<Token<'a>>>, ParserEr
         .map_with(| tok, extra| Spanned(tok, extra.span()))
         .padded_by(comment.repeated())
         .padded()
-        .recover_with(skip_then_retry_until(recovery.ignored(), end()))
-        .map(| tok | { println!("{:?}", tok);  tok})
+        .recover_with(skip_then_retry_until(any().ignored(), end()))
         .repeated()
         .collect::<Vec<Spanned<Token<'a>>>>()
 }
