@@ -30,6 +30,7 @@ theme:
         name: Switch to light mode
 nav:
   - 主页: index.md
+  - Lab 0 环境配置: environment.md
   - Lab 3 中间代码生成: middle-ir-gen.md
   - 附录:
     - appendix/index.md

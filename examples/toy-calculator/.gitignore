@@ -1,0 +1,6 @@
+*
+!.gitignore
+!calculator.l
+!calculator.y
+!Makefile
+!input.txt
