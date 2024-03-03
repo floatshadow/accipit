@@ -37,9 +37,9 @@ let %lhs.var.addr = alloca i64, 1
 let %rhs.var.addr = alloca i64, 1
 ```
 
-在这里我们通过 `alloca` 创建 3 个局部变量，由于这三个局部变量都是 `i64` 类型，因此得到的结果 `%result.var.addr``%lhs.var.addr` 和 `%rhs.var.addr` 这三个虚拟寄存器的值都是 `i64*` 类型，代表这三个局部变量的地址。
-我们并不知道这三个局部变量叫什么名字，只知道这三个局部变量的地址叫什么名字：`%result.var.addr``%lhs.var.addr` 和 `%rhs.var.addr`。
-但是通过地址，我们就能够对这些局部变量读写：
+在这里我们通过 `alloca` 创建三个局部变量，由于这三个局部变量都是 `i64` 类型，因此得到的结果 `%result.var.addr` `%lhs.var.addr` 和 `%rhs.var.addr` 这三个虚拟寄存器的值都是 `i64*` 类型，代表这三个局部变量的地址。
+我们并不知道这三个局部变量叫什么名字，也不关心这三个局部变量叫什么名字，我们只需要知道这三个局部变量的地址是什么：`%result.var.addr` `%lhs.var.addr` 和 `%rhs.var.addr`。
+通过这些地址，我们就能够对这些局部变量读写：
 
 ```rust
 // read value from the address `%lhs.var.addr`
@@ -59,7 +59,7 @@ let %tmp = add 4, 1 // Error here!
 
 但是，SysY 源代码中的局部变量都是可以多次赋值的，`alloca` 指令以及后一种取地址形式的局部变量是为了绕开 SSA 形式的限制，方便你实现“多次赋值”。
 
-比较常见的作法是显式地使用 `alloca` 为所有变量分配栈空间，包括函数参数，当这些变量作为指令的操作数时，先使用一个 `load` 将他们读入临时变量；当这些变量作为指令的目标时，使用一个 `store` 将代表指令结果的临时变量存入地址：
+比较常见的作法是显式地使用 `alloca` 为所有变量分配栈空间，包括函数参数，当这些变量作为指令的操作数时，先使用一个 `load` 将他们读入临时变量（此时创建了一个新的 top level variable），然后将这个临时变量用于运算；当这些变量作为指令的目标时，使用一个 `store` 将代表指令结果的临时变量（运算结果对应的 top level variable）存入地址：
 
 ```c
 /// `lhs`, `rhs` and `result` are local variables, initialized by constant.
@@ -84,16 +84,16 @@ let %result.addr = alloca i64, 1
 
 ```rust
 let %store.lhs = store 1, %lhs.addr
-let %store.rhs = store 1, %rhs.addr
-let %store.result = store 1, %result.addr
+let %store.rhs = store 2, %rhs.addr
+let %store.result = store 0, %result.addr
 ```
 
 `store` 产生的顶层变量/临时变量没什么意义，所以他们的符号可以是匿名的，简化为用数字表示的匿名值：
 
 ```rust
 let %0 = store 1, %lhs.addr
-let %1 = store 1, %rhs.addr
-let %2 = store 1, %result.addr
+let %1 = store 2, %rhs.addr
+let %2 = store 0, %result.addr
 ```
 
 第一次赋值，操作数需要局部变量 `lhs` 和 `rhs`，因此需要 `load` 指令读取它们的值：
@@ -127,7 +127,9 @@ let %8 = add %7, 1
 let %9 = store %8, %result.addr
 ```
 
-这样我们就在不破坏 SSA 形式限制的情况下，完成了变量的多次赋值，完整的代码清单如下：
+这样我们就在不破坏 SSA 形式限制的情况下，完成了变量的多次赋值，你会发现，在这种处理模式下，运算 / load / store 所定义的 top level variable 往往是中间的临时变量。
+完整的代码清单如下：
+
 
 ```rust
 // allocate
@@ -136,8 +138,8 @@ let %rhs.addr = alloca i64, 1
 let %result.addr = alloca i64, 1
 // initialize
 let %0 = store 1, %lhs.addr
-let %1 = store 1, %rhs.addr
-let %2 = store 1, %result.addr
+let %1 = store 2, %rhs.addr
+let %2 = store 0, %result.addr
 // result = lhs + rhs
 let %3 = load %lhs.addr
 let %4 = load %rhs.addr
@@ -148,6 +150,30 @@ let %7 = load %result.addr
 let %8 = add %7, 1
 let %9 = store %8, %result.addr
 ```
+
+或者你可以不关心名字，全部简写为：
+
+
+```rust
+// allocate
+let %0 = alloca i64, 1
+let %1 = alloca i64, 1
+let %2 = alloca i64, 1
+// initialize
+let %3 = store 1, %0
+let %4 = store 2, %1
+let %5 = store 0, %2
+// result = lhs + rhs
+let %6 = load %lhs.addr
+let %7 = load %rhs.addr
+let %8 = add %3, %4
+let %9 = store %8, %result.addr
+// result = result + 1
+let %10 = load %result.addr
+let %11 = add %10, 1
+let %12 = store %11, %result.addr
+```
+
 
 ### 常数
 
@@ -188,6 +214,9 @@ fn %bar(%value: i64) -> i64;
 ```rust
 fn %bar(i64) -> i64;
 ```
+
+由于 SysY 的运行时库无需声明即可使用，你可以选择在读入的 SysY 源代码前先“拼接”上运行时库函数的声明，让你的编译器前端帮你完成从运行时库函数声明到 Accipit IR 函数声明的过程；
+或者你可以手动在生成 Accipit IR 时构造并插入所有运行时函数的声明。
 
 ### 控制流结构
 
