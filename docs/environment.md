@@ -2,7 +2,8 @@
 
 ## 实验环境配置
 
-我们推荐你使用 Linux 系统完成实验. Windows 系统用户可以考虑 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) 或者虚拟机.
+我们推荐你使用 Linux 系统完成实验. Windows 系统用户可以考虑 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) 或者虚拟机. Mac 用户努力自行解决吧.
+
 为了避免不必要的问题，推荐使用 Ubuntu 22.04 LTS 或者 Debian 12 (助教的环境). 当然其他发行版/系统也是可以的, 只要你能正常安装和使用相关工具.
 以下的工具版本均为 Debian 12 上的版本 (其他版本也可以).
 
@@ -19,6 +20,11 @@
     + qemu-user-static 7.2.9
 
 以上工具除了 rust 之外均可以用系统自带的包管理器 (比如 apt) 安装. 
+
+### Bison 和 Flex 安装
+`bison` 和 `flex` 是 Lab 1 要用到的工具. 你可以用 `accipit/examples/toy-calculator` 下的文件来简单测试.
+
+当然本实验并不限制你用什么语言和工具来实现 lexer/parser. 你可以用 Rust, Python, Java, C++ 甚至 OCaml 等语言, 也可以不用 parser generator 而是用 parser generator (Accipit IR 的 parser 就是这样写的) 甚至手写递归下降 parser.
 
 ### Rust 安装
 由于 Accipit IR 相关工具是用 Rust 编写的, 所以需要安装 Rust (你也可以等到 Lab 3 的时候安装). 我们推荐使用[浙大源](https://mirrors.zju.edu.cn/docs/rustup/)安装 [rustup](https://rustup.rs/). 
@@ -69,4 +75,7 @@ TOTAL: 0H-0M-12S-124900us
 <br><br>
 关于为什么不用 `libc`, `qemu-user-static` 是一个用户态的 riscv 虚拟机, 就像你在 OS 实验中用 `qemu-system-riscv64` 运行的系统一样, 它是不带标准库的. 如果你想输入输出, 你需要手动调用 `syscall`. 这个工作在之前是由 `libc` 来帮你完成的, 你只需要调用它提供的库函数 (比如 `printf`), 我们提供的 runtime 也是这样实现的. 
 <br><br>
-如果你实在想用 `libc` (比如说你想要用 C++ 写 runtime) 也是可以实现的, 但是助教并没有在 Debian 12 上配出来. 你可以考虑使用 ArchLinux, 它对交叉编译工具链的支持更友好一些 (至少助教在 ArchLinux 上配出来了).
+如果你实在想用 `libc` (比如说你想要用 C++ 写 runtime) 也是可以实现的, 但是助教并没有在 Debian 12 上配出来. 你可以考虑使用 ArchLinux, 它对交叉编译工具链的支持更友好一些 (至少助教在 ArchLinux 上配出来了). 如果你对此感兴趣可以和助教交流.
+
+## 实验提交
+没有提交内容. Just have fun.
