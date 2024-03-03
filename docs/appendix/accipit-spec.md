@@ -1,4 +1,4 @@
-# Structure
+# Accipit IR Specification
 
 
 ## Conventions
@@ -77,6 +77,10 @@ value      ::= <symbol> | lit<>
 
 符号 (symbol) 包含所有标识符，代表了中间代码中的变量，包括带有名称的和匿名的临时变量。
 而 IR 中合法的值 (value) 既可以是符号，表示对应变量的值；也可以是字面量，表示字面量本身的值。
+
+## Structures
+
+下面我们定义 Accipit IR 的各个结构。
 
 ### Types
 
@@ -303,12 +307,12 @@ global ::= <symbol> ':' 'region' <type> <int_lit>
 
 则 `%a` 为 `i64*` 类型，所指向的地址能存放 2 个 i64。
 
-# Execution
+## Execution
 
 TBD
 
 
-# Acknowledgement
+## Acknowledgement
 
 IR 的设计参考了以下课程与资料：
 
