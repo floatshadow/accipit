@@ -1,5 +1,6 @@
-use core::fmt;
+use std::fmt;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::ir::{structures::*, values::{self, ConstantInt}};
 
@@ -16,6 +17,7 @@ pub enum ExecutionError {
     NotImplemented(String),
     UnexpectedIncompatibleVal(Val),
     UseUndefinedValue,
+    InvalidInputArguments(String),
     LexerError,
     ParseError
 }
@@ -69,10 +71,33 @@ pub enum Val {
     Bool(bool),
     Pointer(MemoryObject),
     /// Function reference
-    Function(FunctionRef),
+    Function(String),
     Undefined,
 }
 
+impl FromStr for Val {
+    type Err = ExecutionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let int_value = s.parse::<i32>()
+            .map_err(| _ | ExecutionError::InvalidInputArguments(String::from(s)))?;
+
+        Ok(Val::Integer(int_value))
+    }
+}
+
+impl fmt::Display for Val {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Val::Unit => write!(f, "()"),
+            Val::Integer(inner) => write!(f, "{}", inner),
+            Val::Bool(inner) => write!(f, "{}", inner),
+            Val::Pointer(inner) => write!(f, "<inner pointer>: {:?}", inner),
+            Val::Function(name) => write!(f, "function: {}", name),
+            Val::Undefined => write!(f, "<undefined>")
+        }
+    }
+}
 
 impl Val {
     pub fn compute_binary(
@@ -235,6 +260,7 @@ pub struct ProgramEnv {
     pub position: Option<BlockRef>,
     /// program counter.
     pub program_counter: Option<ValueRef>,
+    pub global_frame: Frame,
     pub frames: Vec<Frame>
 }
 
@@ -247,12 +273,12 @@ impl ProgramEnv {
         self.frames.last_mut()
     }
 
-    pub fn get_global_frame(&self) -> Option<&Frame> {
-        self.frames.first()
+    pub fn get_global_frame(&self) -> &Frame {
+        &self.global_frame
     }
 
-    pub fn get_global_frame_mut(&mut self) -> Option<&mut Frame> {
-        self.frames.first_mut()
+    pub fn get_global_frame_mut(&mut self) -> &mut Frame {
+        &mut self.global_frame
     }
 
     fn search_value_env(
@@ -261,11 +287,11 @@ impl ProgramEnv {
     ) -> Option<&Frame> {
         let top_frame = self.get_top_frame().expect("no active frame");
         if top_frame.frame_val_env.contains_key(val_ref) {
-            self.get_top_frame()
+            Some(top_frame)
         } else {
-            let global_frame = self.get_global_frame().expect("no global frame");
+            let global_frame = self.get_global_frame();
             if global_frame.frame_val_env.contains_key(val_ref) {
-                self.get_global_frame()
+                Some(global_frame)
             } else {
                 None
             }
@@ -281,15 +307,14 @@ impl ProgramEnv {
         if top_frame.frame_val_env.contains_key(val_ref) {
             self.get_top_frame_mut()
         } else {
-            let global_frame = self.get_global_frame_mut().expect("no global frame");
+            let global_frame = self.get_global_frame();
             if global_frame.frame_val_env.contains_key(val_ref) {
-                self.get_global_frame_mut()
+                Some(self.get_global_frame_mut())
             } else {
                 // slient return top frame assume set the `val`` of a new `value`
                 self.get_top_frame_mut()
             }
         }
-        
     }
 
     pub fn set_val(&mut self, val_ref: ValueRef, value: Val) -> Option<Val> {
@@ -338,6 +363,7 @@ impl ProgramEnv {
         ProgramEnv {
             position: None,
             program_counter: None,
+            global_frame: Frame::new_global(),
             frames: Vec::new()
         }
     }
@@ -350,7 +376,7 @@ pub fn single_step(
     value: ValueRef 
 ) -> Result<Val, ExecutionError> {
     let value_data = module.get_value(value);
-    println!("single step on `{}`", value_data);
+    // println!("single step on `{}`", value_data);
     match &value_data.kind {
         ValueKind::Binary(inner) => {
             let lhs = env.get_val(inner.lhs);
@@ -549,7 +575,7 @@ pub fn run_on_module(
     entry_fn: &str,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
-    let mut global_frame = Frame::new_global();
+    let mut global_frame = env.get_global_frame_mut();
     // set all constant value
     module.value_ctx
         .iter()
@@ -564,7 +590,6 @@ pub fn run_on_module(
                 _ => None,
             };
         });
-    env.frames.push(global_frame);
 
     let function = module.get_function_ref(entry_fn);
     run_on_function(env, module, function, args)

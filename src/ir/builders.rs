@@ -266,7 +266,7 @@ impl IRBuilder {
         match name {
             Some(bb_name) => {
                 if let Some(dangling_bb_ref) = self.get_block_ref(&bb_name) {
-                    println!("find dangling basic block `%{}`\n", bb_name);
+                    // println!("find dangling basic block `%{}`\n", bb_name);
                     let current_function = self.get_current_function_data_mut();
                     current_function.append_back_dangling_basic_block(dangling_bb_ref);
                     dangling_bb_ref
@@ -323,7 +323,7 @@ impl IRBuilder {
             },
             None => expected_ty
         };
-        println!("binexpr `{}` result type `{}`", op, result_ty);
+        // println!("binexpr `{}` result type `{}`", op, result_ty);
         let mut binexpr = values::Binary::new(result_ty, op, lhs, rhs);
         binexpr.set_name(inner_name);
         self.insert_instruction_symbol(binexpr)
