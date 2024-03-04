@@ -64,7 +64,7 @@ lit        ::=  <int_lit> | <none_lit> | <unit_lit>
 
 除了可以用上述具名或匿名的标识符来引用某个值，Accipit IR 还有常数值。
 
-`int_lit` 定义了 64 位有符号整数字面量，我们只考虑普通的十进制整数的文本形式。
+`int_lit` 定义了 32 位有符号整数字面量，我们只考虑普通的十进制整数的文本形式。
 
 `none_lit` 是两个特殊的符号，用于 offset 指令。
 
@@ -87,23 +87,23 @@ value      ::= <symbol> | lit<>
 Accipit IR 中的众多实体按类型区分，类型关乎到程序的合法性、执行的过程。
 
 ```
-type    ::=   'i64'
+type    ::=   'i32'
             | '()'
             | <type> '*'
             | 'fn' '(' separated_list(<type>, ',') ')' '->' <type>
 ```
 
-i64，64 位带符号整数。
+i32，32 位带符号整数。
 
 单值类型 ()，读作 unit，可以理解为空类型 void。
 
 指针类型，由被指的类型 (pointee type) 加上后缀 * 表示。
 
 函数类型，类似于函数声明，例如：
-- 加法 add，两个 i64 参数，一个 i64 返回值 `fn(i64, i64) -> i64`。
-- 读入，无参数，一个 i64 返回值 `fn() -> i64`。
-- 输出，一个 i64 参数，无返回值 `fn(i64) -> ()`。
-- `fn(i64*) -> i64*`，接受一个 i64* 参数，返回一个 i64* 类型的返回值。
+- 加法 add，两个 i32 参数，一个 i32 返回值 `fn(i32, i32) -> i32`。
+- 读入，无参数，一个 i32 返回值 `fn() -> i32`。
+- 输出，一个 i32 参数，无返回值 `fn(i32) -> ()`。
+- `fn(i32*) -> i32*`，接受一个 i32* 参数，返回一个 i32* 类型的返回值。
 
 ### Instructions
 
@@ -136,7 +136,7 @@ binexpr   ::=  <binop> <value> ',' <value>
 
 数值计算指令操作符中不包含单目运算符，例如 lnot (logic not) 和 neg (numeric negation)，因为他们是多余的：
 
-- 按位取反，`not %src` 等价于 `xor %src: i64, -1`.
+- 按位取反，`not %src` 等价于 `xor %src: i32, -1`.
 - 逻辑取反，`lnot %src` 等价于 `eq %src, 0`.
 - 取负数，`neg %src` 等价于 `sub 0, %src`.
 
@@ -144,7 +144,7 @@ binexpr   ::=  <binop> <value> ',' <value>
 
 ##### 类型规则
 
-接受两个 i64 类型操作数，返回一个 i64 类型的值. 
+接受两个 i32 类型操作数，返回一个 i32 类型的值.
 
 
 #### Pointer Instructions
@@ -164,11 +164,11 @@ offset 指令有一个类型标注，用来表明数组中元素类型；
 一共有 `2n + 1` 个参数，其中第一个参数是一个指针，表示基地址；
 后 `2n` 个参数每两个一组， 每一组的形式为 `[index < size]` 其中 index 表示该维度上的偏移量，size 表示该维度的大小.
 
-例如 C 语言中声明数组 `int g[3][2][5]`，访问元素 `g[x][y][z]` 时，对应的 offset 指令为 `offset i64, %g.addr: i64*, [x < 3], [y < 2], [z < 5]`。
+例如 C 语言中声明数组 `int g[3][2][5]`，访问元素 `g[x][y][z]` 时，对应的 offset 指令为 `offset i32, %g.addr: i32*, [x < 3], [y < 2], [z < 5]`。
 
 当然，可能会出现高位数组有一维不知道大小或者单个指针偏移的情况，在这种情况下，对应的维度使用 none 标记：
-- 二维数组 `int g[][5]` 访问 `g[x][y]`，`offset i64, %g.addr: i64*, [x < none], [y < 5]`.
-- 单个指针 `int *p` 访问 `p + 10`，`offset i64, %g.addr: i64*, [10 < none]`.
+- 二维数组 `int g[][5]` 访问 `g[x][y]`，`offset i32, %g.addr: i32*, [x < none], [y < 5]`.
+- 单个指针 `int *p` 访问 `p + 10`，`offset i32, %g.addr: i32*, [10 < none]`.
 
 为什么要有 size 这个参数作为一个下标的上界？
 为了你方便处理，我们在类型中舍弃了高维数组，因为数组类型在后端代码生成时处理相对比较麻烦，但是在前端处理这些信息相对容易。
@@ -212,7 +212,7 @@ store  ::= 'store' <value> ',' <symbol>
 
 alloca 指令的作用是为局部变量开辟栈空间，并获得一个指向 `<type>` 类型，长度为 `<int_lit>` 的指针。
 可以理解为，在栈上定义一个数组 `<type>[<int_lit>]`，并获取数组首元素的地址。
-或者类比 C 代码 `int *a = (int *)malloc(100 * sizeof(int))`， 对应 `let %a: i64* = alloc i64, 100`.
+或者类比 C 代码 `int *a = (int *)malloc(100 * sizeof(int))`， 对应 `let %a: i32* = alloc i32, 100`.
 
 load 指令接受一个指针类型 T* 的符号，返回一个 T 类型的值.
 
@@ -228,7 +228,7 @@ ret   ::=  'ret' <value>
 
 ##### 说明
 
-br 进行条件跳转，接受的 `<value>` 应当是 i64 类型.
+br 进行条件跳转，接受的 `<value>` 应当是 i32 类型.
 若为 true，跳转到第一个 `<label>` 标记的基本块起始处执行；
 若为 false，跳转到第二个 `<label>` 标记的基本块起始处执行.
 
@@ -247,7 +247,7 @@ fun   ::= 'fn' <ident> '(' <plist> ')' '->' <type> {';' | <body>}
 ```
 
 函数包含函数头以及可选的函数体。
-如果没有函数体，则以一个分号 `;` 结尾，例如 `fn getchar() -> i64;`
+如果没有函数体，则以一个分号 `;` 结尾，例如 `fn getchar() -> i32;`
 
 函数头以关键字 `fn` 开头，包含函数命令和参数列表和返回值，参数列表必须显式地标出每个参数的类型。
 
@@ -261,13 +261,13 @@ bb    ::= <label> <instr>* <terminator>
 
 下面是一个阶乘函数的例子：
 ```
-fn %factorial(%n: i64) -> i64 {
+fn %factorial(%n: i32) -> i32 {
 %Lentry:
-    /* Create a stack slot of i64 type as the space of the return value.
+    /* Create a stack slot of i32 type as the space of the return value.
      * if n equals 1, store `1` to this address, i.e. `return 1`,
      * otherwise, do recursive call, i.e. return n * factorial(n - 1).
      */
-    let %ret.addr = alloca i64, 1
+    let %ret.addr = alloca i32, 1
     let %cmp = eq %n, 0
     br %cmp, label %Ltrue, label %Lfalse
 %Ltrue:
@@ -302,10 +302,10 @@ global ::= <symbol> ':' 'region' <type> <int_lit>
 例如：
 
 ```
-%a : region i64, 2
+%a : region i32, 2
 ```
 
-则 `%a` 为 `i64*` 类型，所指向的地址能存放 2 个 i64。
+则 `%a` 为 `i32*` 类型，所指向的地址能存放 2 个 i32。
 
 ## Execution
 

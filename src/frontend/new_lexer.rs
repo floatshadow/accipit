@@ -90,15 +90,15 @@ pub fn lexer<'a>() -> impl Parser<'a, &'a str, Vec<Spanned<Token<'a>>>, ParserEr
     ]);
 
     let primitive_type = choice([
-        keyword("i64").to(Token::TyInt64),
+        keyword("i32").to(Token::TyInt32),
         keyword("i1").to(Token::TyInt1),
         keyword("ptr").to(Token::TyPtr),
     ]);
 
     let int_literal = int::<_, _, ParserError<'a, char>>(10)
-        .from_str::<i64>()
+        .from_str::<i32>()
         .unwrapped()
-        .map(Token::LtInt64);
+        .map(Token::LtInt32);
 
     let literal = int_literal.or(choice([
         keyword("true").to(Token::LtInt1(true)),

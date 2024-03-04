@@ -51,10 +51,10 @@ fn identifier(input: Tokens) -> IResult<Tokens, &str> {
     }
 }
 
-fn i64_literal(input: Tokens) -> IResult<Tokens, i64> {
+fn i32_literal(input: Tokens) -> IResult<Tokens, i32> {
     let (input, tk) = take(1usize)(input)?;
     match tk.iter_elements().next().unwrap() {
-        Token::LtInt64(value) => Ok((input, value.clone())),
+        Token::LtInt32(value) => Ok((input, value.clone())),
         _ => Err(Err::Error(VerboseError::from_error_kind(input, ErrorKind::Tag)))
     }
 }
@@ -69,7 +69,7 @@ fn i1_literal(input: Tokens) -> IResult<Tokens, bool> {
 
 fn parse_literal(input: Tokens) -> IResult<Tokens, Value> {
     alt((
-        map(i64_literal, values::ConstantInt::new_value),
+        map(i32_literal, values::ConstantInt::new_value),
         map(i1_literal, values::ConstantBool::new_bool_value),
         value(values::ConstantUnit::new_value(),
             pair(token(Token::LParen), token(Token::RParen)))
@@ -79,7 +79,7 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Value> {
 
 fn parse_base_type(input: Tokens) -> IResult<Tokens, Type> {
     alt((
-        value(Type::get_i64(), token(Token::TyInt64)),
+        value(Type::get_i32(), token(Token::TyInt32)),
         value(Type::get_i1(), token(Token::TyInt1)),
         value(Type::get_unit(), pair(
             token(Token::LParen), token(Token::RParen)))
@@ -214,7 +214,7 @@ impl<'a, 'b: 'a> Parser {
         let (input, (base_ty, region_size)) = preceded(
             token(Token::TkAlloca),
             separated_pair(
-                parse_type, token(Token::Comma), i64_literal)
+                parse_type, token(Token::Comma), i32_literal)
         )(input)?;
 
         Ok((input, builder.borrow_mut().emit_alloca(
@@ -277,7 +277,7 @@ impl<'a, 'b: 'a> Parser {
 
         let parse_bounds = alt((
             value(None, token(Token::LtNone)),
-            map(i64_literal, | lit | Some(usize::try_from(lit).expect("expect non-negative offset bound")))
+            map(i32_literal, | lit | Some(usize::try_from(lit).expect("expect non-negative offset bound")))
         ));
 
         let (input, (base_ty, addr, indices_bounds)) = preceded(
@@ -553,43 +553,43 @@ mod test {
     fn test_ident() {
         test_parser!(parse_symbol, "%a.very.long.identifier", ("a.very.long.identifier", None));
         test_parser!(parse_symbol, "@12", ("12", None));
-        test_parser!(parse_symbol, "%res: i64", ("res", Some(Type::get_i64())));
+        test_parser!(parse_symbol, "%res: i32", ("res", Some(Type::get_i32())));
         test_parser!(parse_symbol, "%implicit_symbol", ("implicit_symbol", None));
-        test_parser!(parse_symbol, "#DivisionByZero: fn(i64, i64) -> ()", 
-                    ("DivisionByZero", Some(Type::get_function(vec![Type::get_i64(), Type::get_i64()], Type::get_unit()))));
+        test_parser!(parse_symbol, "#DivisionByZero: fn(i32, i32) -> ()",
+                    ("DivisionByZero", Some(Type::get_function(vec![Type::get_i32(), Type::get_i32()], Type::get_unit()))));
     }
 
     #[test]
     fn test_type() {
-        test_parser!(parse_type, "i64", Type::get_i64());
+        test_parser!(parse_type, "i32", Type::get_i32());
         test_parser!(parse_type, "i1", Type::get_i1());
         test_parser!(parse_type, "()", Type::get_unit());
-        test_parser!(parse_type, "i64*", Type::get_pointer(Type::get_i64()));
-        test_parser!(parse_type, "i64**", Type::get_pointer(Type::get_pointer(Type::get_i64())));
+        test_parser!(parse_type, "i32*", Type::get_pointer(Type::get_i32()));
+        test_parser!(parse_type, "i32**", Type::get_pointer(Type::get_pointer(Type::get_i32())));
         test_parser!(parse_type, "fn() -> ()", 
                 Type::get_function(vec![], Type::get_unit()));
-        test_parser!(parse_type, "fn(i64, i64) -> ()", 
-                Type::get_function(vec![Type::get_i64(), Type::get_i64()], Type::get_unit()));
-        test_parser!(parse_type, "fn((), i64) -> i64*",
-                Type::get_function(vec![Type::get_unit(), Type::get_i64()], Type::get_pointer(Type::get_i64())));
-        test_parser!(parse_type, "fn(fn(i64) -> i64 ) -> ()",
-                Type::get_function(vec![Type::get_function(vec![Type::get_i64()], Type::get_i64())], Type::get_unit()));
+        test_parser!(parse_type, "fn(i32, i32) -> ()",
+                Type::get_function(vec![Type::get_i32(), Type::get_i32()], Type::get_unit()));
+        test_parser!(parse_type, "fn((), i32) -> i32*",
+                Type::get_function(vec![Type::get_unit(), Type::get_i32()], Type::get_pointer(Type::get_i32())));
+        test_parser!(parse_type, "fn(fn(i32) -> i32 ) -> ()",
+                Type::get_function(vec![Type::get_function(vec![Type::get_i32()], Type::get_i32())], Type::get_unit()));
     }
 
     #[test]
     fn test_filter_comment() {
-        test_parser!(parse_type, "fn((), // EOL-style comment \n  i64) -> /* C++ style comment \n * newline */ i64*",
-                Type::get_function(vec![Type::get_unit(), Type::get_i64()], Type::get_pointer(Type::get_i64())));
+        test_parser!(parse_type, "fn((), // EOL-style comment \n  i32) -> /* C++ style comment \n * newline */ i32*",
+                Type::get_function(vec![Type::get_unit(), Type::get_i32()], Type::get_pointer(Type::get_i32())));
     }
 
     #[test]
     fn test_function_header() {
         let parser = Parser::parse_function_header;
         test_parser!( parser,
-            "fn %add(#1: i64, #2: i64) -> i64;",
+            "fn %add(#1: i32, #2: i32) -> i32;",
             (String::from("add"), 
-            vec![(Some(String::from("1")), Type::get_i64()), (Some(String::from("2")), Type::get_i64())],
-            Type::get_i64(),
+            vec![(Some(String::from("1")), Type::get_i32()), (Some(String::from("2")), Type::get_i32())],
+            Type::get_i32(),
             true
             )
         )

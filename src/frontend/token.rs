@@ -10,12 +10,12 @@ pub enum Token<'a> {
     // Identifier
     TkIdent(&'a str),
     // Literals
-    LtInt64(i64),
+    LtInt32(i32),
     LtInt1(bool),
     LtNone,
     LtNull,
     // primitive type keyword 
-    TyInt64,
+    TyInt32,
     TyInt1,
     // no `TyUnit` due to the conflict (LParen, RParen) v.s. TyUnit
     TyPtr,
@@ -73,11 +73,11 @@ impl<'a> fmt::Display for Token<'a> {
         use Token::*;
         match self {
             TkIdent(ident) => write!(f, "{}", ident),
-            LtInt64(i64_lit) => write!(f, "{}", i64_lit),
+            LtInt32(i32_lit) => write!(f, "{}", i32_lit),
             LtInt1(i1_lit) => write!(f, "{}", i1_lit),
             LtNone => write!(f, "none"),
             LtNull => write!(f, "null"),
-            TyInt64 => write!(f, "i64"),
+            TyInt32 => write!(f, "i32"),
             TyInt1 => write!(f, "i1"),
             TyPtr => write!(f, "ptr"),
             // Binary operator

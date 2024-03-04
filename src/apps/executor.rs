@@ -65,7 +65,7 @@ impl MemoryObject {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Val {
     Unit,
-    Integer(i64),
+    Integer(i32),
     Bool(bool),
     Pointer(MemoryObject),
     /// Function reference
@@ -176,7 +176,7 @@ impl Val {
 impl Val {
     pub fn matches_value(self, value: &Value) -> Result<Val, ExecutionError> {
         if match &self {
-            Val::Integer(..) => value.ty.is_i64_type(),
+            Val::Integer(..) => value.ty.is_i32_type(),
             Val::Bool(..) => value.ty.is_i1_type(),
             Val::Pointer(..) => value.ty.is_pointer_type(),
             Val::Function(..) => value.ty.is_function_type(),

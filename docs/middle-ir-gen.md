@@ -46,19 +46,19 @@ int factorial(int n) {
 参考中间代码：
 ```rust
 
-fn %factorial(#n: i64) -> i64 {
+fn %factorial(#n: i32) -> i32 {
 %Lentry:
-    // create a stack slot of i64 type as the space of the return value.
+    // create a stack slot of i32 type as the space of the return value.
     // if n equals 1, store `1` to this address, i.e. `return 1`,
     // otherwise, do recursive call, i.e. return n * factorial(n - 1).
-    let %ret.addr: i64* = alloca i64, 1
+    let %ret.addr: i32* = alloca i32, 1
     // store function parameter on the stack.
-    let %n.addr: i64* = alloca i64, 1
+    let %n.addr: i32* = alloca i32, 1
     let %4: () = store #n, %n.addr
     // create a slot for local variable ans, uninitialized.
-    let %ans.addr: i64* = alloca i64, 1
+    let %ans.addr: i32* = alloca i32, 1
     // when we need #n, you just read it from %n.addr.
-    let %6: i64 = load %n.addr
+    let %6: i32 = load %n.addr
     // comparison produce an `i8` value.
     let %cmp: i1 = eq %6, 0
     br i1 %cmp, label %Ltrue, label %Lfalse
@@ -68,26 +68,26 @@ fn %factorial(#n: i64) -> i64 {
     jmp label %Lret
 %Lfalse:
     // n - 1
-    let %13: i64 = load %n.addr
-    let %14: i64 = sub %13, 1
+    let %13: i32 = load %n.addr
+    let %14: i32 = sub %13, 1
     // factorial(n - 1)
-    let %res: i64 = call fn %factorial, %14
+    let %res: i32 = call fn %factorial, %14
     // n
     let %16 = load %n.addr
     // n * factorial(n - 1)
-    let %17: i64 = mul %16, %res
+    let %17: i32 = mul %16, %res
     // write local variable `ans`
     let %18: () = store %17, %ans.addr
     // now we meets `return ans`, which means we
     // should first read value from `%ans.addr` and then
     // write it to `%ret.addr`.
-    let %19: i64 = load %ans.addr
+    let %19: i32 = load %ans.addr
     let %20: () = store %19, %ret.addr
     jmp label %Lret
 %Lret:
     // load return value from %ret.addr
-    let %ret.val: i64 = load %ret.addr: i64*
-    ret %ret.val: i64
+    let %ret.val: i32 = load %ret.addr: i32*
+    ret %ret.val: i32
 }
 ```
 
@@ -140,7 +140,7 @@ $ dot -Tpng -o test.png .test.dot
 
     ```c
     enum value_kind {
-        kind_constant_int64,
+        kind_constant_int32,
         Kind_constant_unit,
         // ...
         kind_constant_binary_expression,
@@ -154,7 +154,7 @@ $ dot -Tpng -o test.png .test.dot
         enum value_kind kind,
         struct type *ty;
         union {
-            struct { int number; } constant_int64;
+            struct { int number; } constant_int32;
             struct { enum binary_op op, struct value *lhs, *rhs; } binary_expr;
             struct { struct function *callee, struct vector args } function_call;
             struct { struct value* src_addr } load;
@@ -253,7 +253,7 @@ let %2 = add %0, %1
 <tr class="odd">
 <td><code>INT</code></td>
 <td><div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>number <span class="op">=</span> get_number<span class="op">(</span>INT<span class="op">);</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_constant_int64<span class="op">(</span>number<span class="op">);</span></span></code></pre></div></td>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_constant_int32<span class="op">(</span>number<span class="op">);</span></span></code></pre></div></td>
 </tr>
 <tr class="even">
 <td><code>ID</code></td>
@@ -269,7 +269,7 @@ let %2 = add %0, %1
 </tr>
 <tr class="even">
 <td><code>MINUS Expr1</code></td>
-<td><div class="sourceCode" id="cb4"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>zero_value <span class="op">=</span> create_constant_int64<span class="op">(</span><span class="dv">0</span><span class="op">);</span></span>
+<td><div class="sourceCode" id="cb4"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>zero_value <span class="op">=</span> create_constant_int32<span class="op">(</span><span class="dv">0</span><span class="op">);</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>expr1_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr1<span class="op">,</span> sym_table<span class="op">);</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_binary<span class="op">(</span>subop<span class="op">,</span> zero_value<span class="op">,</span> expr1_value<span class="op">,</span> basic_block<span class="op">);</span></span></code></pre></div></td>
 </tr>

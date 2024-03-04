@@ -71,12 +71,12 @@ impl Binary {
 
 #[derive(Debug, Clone)]
 pub struct ConstantInt {
-    pub value: i64
+    pub value: i32
 }
 
 impl ConstantInt {
-    pub fn new_value(value: i64) -> Value {
-        Value::new(Type::get_i64(), None, ValueKind::ConstantInt(Self {value}))
+    pub fn new_value(value: i32) -> Value {
+        Value::new(Type::get_i32(), None, ValueKind::ConstantInt(Self {value}))
     }
 }
 

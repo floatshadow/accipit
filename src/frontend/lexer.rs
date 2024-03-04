@@ -39,13 +39,13 @@ fn filter_whitespace_and_comment(input: &str) -> IResult<&str, ()> {
     ))(input)
 }
 
-fn lex_i64_literal(input: &str) -> IResult<&str, Token> {
+fn lex_i32_literal(input: &str) -> IResult<&str, Token> {
     let (input, _) = filter_whitespace_and_comment(input)?;
     let (input, value) = map_res(
         recognize(pair(opt(tag("-")), digit1)),
-        str::parse::<i64>
+        str::parse::<i32>
     )(input)?;
-    Ok((input, Token::LtInt64(value)))
+    Ok((input, Token::LtInt32(value)))
 }
 
 fn lex_i1_literal(input: &str) -> IResult<&str, Token> {
@@ -68,7 +68,7 @@ fn lex_nullptr_literal(input: &str) -> IResult<&str, Token> {
 
 fn lex_literal(input: &str) -> IResult<&str, Token> {
     alt((
-        lex_i64_literal,
+        lex_i32_literal,
         lex_i1_literal,
         lex_none_literal,
         lex_nullptr_literal
@@ -178,7 +178,7 @@ fn lex_identifier(input: &str) -> IResult<&str, Token> {
 
 fn lex_primitive_type(input: &str) -> IResult<&str, Token> {
     preceded(filter_whitespace_and_comment, alt((
-        value(Token::TyInt64,tag("i64")),
+        value(Token::TyInt32,tag("i32")),
         value(Token::TyInt1, tag("i1")),
         // value(Token::TyUnit, tag("()")),
         value(Token::TyPtr,  tag("ptr")),

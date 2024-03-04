@@ -32,12 +32,12 @@ let %result = add %lhs, %rhs
 取这个名字，是因为他们不像顶层变量有一个新的符号，他们只有局部变量所对应的地址，只能通过 `alloca` 指令创建：
 
 ```rust
-let %result.var.addr = alloca i64, 1
-let %lhs.var.addr = alloca i64, 1
-let %rhs.var.addr = alloca i64, 1
+let %result.var.addr = alloca i32, 1
+let %lhs.var.addr = alloca i32, 1
+let %rhs.var.addr = alloca i32, 1
 ```
 
-在这里我们通过 `alloca` 创建三个局部变量，由于这三个局部变量都是 `i64` 类型，因此得到的结果 `%result.var.addr` `%lhs.var.addr` 和 `%rhs.var.addr` 这三个虚拟寄存器的值都是 `i64*` 类型，代表这三个局部变量的地址。
+在这里我们通过 `alloca` 创建三个局部变量，由于这三个局部变量都是 `i32` 类型，因此得到的结果 `%result.var.addr` `%lhs.var.addr` 和 `%rhs.var.addr` 这三个虚拟寄存器的值都是 `i32*` 类型，代表这三个局部变量的地址。
 我们并不知道这三个局部变量叫什么名字，也不关心这三个局部变量叫什么名字，我们只需要知道这三个局部变量的地址是什么：`%result.var.addr` `%lhs.var.addr` 和 `%rhs.var.addr`。
 通过这些地址，我们就能够对这些局部变量读写：
 
@@ -75,9 +75,9 @@ result = result + 1;
 首先为局部变量分配栈空间：
 
 ```rust
-let %lhs.addr = alloca i64, 1
-let %rhs.addr = alloca i64, 1
-let %result.addr = alloca i64, 1
+let %lhs.addr = alloca i32, 1
+let %rhs.addr = alloca i32, 1
+let %result.addr = alloca i32, 1
 ```
 
 然后使用 `store` 指令完成这些局部变量的初始化：
@@ -133,9 +133,9 @@ let %9 = store %8, %result.addr
 
 ```rust
 // allocate
-let %lhs.addr = alloca i64, 1
-let %rhs.addr = alloca i64, 1
-let %result.addr = alloca i64, 1
+let %lhs.addr = alloca i32, 1
+let %rhs.addr = alloca i32, 1
+let %result.addr = alloca i32, 1
 // initialize
 let %0 = store 1, %lhs.addr
 let %1 = store 2, %rhs.addr
@@ -156,9 +156,9 @@ let %9 = store %8, %result.addr
 
 ```rust
 // allocate
-let %0 = alloca i64, 1
-let %1 = alloca i64, 1
-let %2 = alloca i64, 1
+let %0 = alloca i32, 1
+let %1 = alloca i32, 1
+let %2 = alloca i32, 1
 // initialize
 let %3 = store 1, %0
 let %4 = store 2, %1
@@ -206,13 +206,13 @@ int bar(int value);
 变成：
 
 ```rust
-fn %bar(%value: i64) -> i64;
+fn %bar(%value: i32) -> i32;
 ```
 
 由于没有函数体，函数参数的名字无关紧要，因此你也可以略去参数名，只保留参数类型：
 
 ```rust
-fn %bar(i64) -> i64;
+fn %bar(i32) -> i32;
 ```
 
 由于 SysY 的运行时库无需声明即可使用，你可以选择在读入的 SysY 源代码前先“拼接”上运行时库函数的声明，让你的编译器前端帮你完成从运行时库函数声明到 Accipit IR 函数声明的过程；
@@ -253,13 +253,13 @@ jmp label %dest
 ```
 
 ```rust
-fn max(%a: i64, %b: i64) -> i64 {
+fn max(%a: i32, %b: i32) -> i32 {
 %entry:
-    let %a.addr = alloca i64, 1
-    let %b.addr = alloca i64, 1
+    let %a.addr = alloca i32, 1
+    let %b.addr = alloca i32, 1
     let %0 = store %a, %a.addr
     let %1 = store %b, %b.addr
-    let %retval = alloca i64, 1
+    let %retval = alloca i32, 1
     let %2 = load %a.addr
     let %3 = load %b.addr
     let %4 = gt %2, %3
