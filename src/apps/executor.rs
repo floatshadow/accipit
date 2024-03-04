@@ -1,10 +1,16 @@
-use std::fmt;
+use std::fmt::Pointer;
+use std::{char, fmt};
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::ir::{structures::*, values::{self, ConstantInt}};
+use crate::ir::{
+    values,
+    structures::*
+};
 
+use nom::character;
 use slotmap::{SlotMap, SecondaryMap};
+use scanf::scanf;
 
 #[derive(Debug)]
 pub enum ExecutionError {
@@ -18,6 +24,7 @@ pub enum ExecutionError {
     UnexpectedIncompatibleVal(Val),
     UseUndefinedValue,
     InvalidInputArguments(String),
+    InternalError(String),
     LexerError,
     ParseError
 }
@@ -439,13 +446,102 @@ pub fn single_step(
                 .iter().cloned()
                 .map(| arg_ref | env.get_val(arg_ref).clone())
                 .collect::<Vec<_>>();
-
-            let func_ref = module.get_function_ref(&inner.callee);
-            run_on_function(
-                env,
-                module,
-                func_ref,
-                args_val)
+            // runtime IO
+            match inner.callee.as_str() {
+                "getint" => {
+                    let mut value: i32 = 0;
+                    scanf!("{i32}", value).expect("expect a `int` input");
+                    Ok(Val::Integer(value))
+                },
+                "getch" => {
+                    let mut character: char = 0 as char;
+                    scanf!("{char}", character).expect("expect a `char` input");
+                    Ok(Val::Integer(character as i32))
+                },
+                "getarray" => {
+                    assert!(args_val.len() == 1, "`getarray` expect 1 argument");
+                    let addr = args_val[0].clone();
+                    match addr {
+                        Val::Pointer(inner) => {
+                            let mut n: i32 = 0;
+                            scanf!("{i32}", n).expect("expect a `int` input as array size");
+                            let buffer = env.get_memory_mut(inner.base);
+                            assert!(n >= 0, "expect a non-negative array size");
+                            for i in 0..n {
+                                let mut val: i32 = 0;
+                                scanf!("{i32}", val).expect("expect a `int` input as array element");
+                                assert!(inner.offset_within + (i as usize) < inner.size,
+                                        "`getarray` access memory out of bounds"
+                                );
+                                buffer[inner.offset_within + i as usize] = Val::Integer(val);
+                            }
+                            Ok(Val::Integer(n))
+                        },
+                        _ => Err(ExecutionError::InternalError(String::from("`getarray` accepts 1 pointer type argument only")))
+                    }
+                },
+                "putint" => {
+                    assert!(args_val.len() == 1, "`putint` expect 1 argument");
+                    let output_value = args_val[0].clone();
+                    match output_value {
+                        Val::Integer(inner) => {
+                            print!("{}", inner);
+                            Ok(Val::Unit)
+                        },
+                        _ => Err(ExecutionError::InternalError(String::from("`putint` accepts 1 integer type argument only")))
+                    }
+                },
+                "putch" => {
+                    assert!(args_val.len() == 1, "`putch` expect 1 argument");
+                    let output_value = args_val[0].clone();
+                    match output_value {
+                        Val::Integer(inner) => {
+                            print!("{}", char::from_u32(inner as u32).expect("ilegal char value in `putch`"));
+                            Ok(Val::Unit)
+                        },
+                        _ => Err(ExecutionError::InternalError(String::from("`putch` accepts 1 integer type argument only")))
+                    }
+                },
+                "putarray" => {
+                    assert!(args_val.len() == 2, "`putarray` expect 2 argument");
+                    let num = match &args_val[1] {
+                        Val::Integer(inner) => Ok(inner.clone()),
+                        _ => Err(ExecutionError::InternalError(String::from("`putarray` expect integer type argument as array size")))
+                    }?;
+                    print!("{}:", num);
+                    let addr = args_val[1].clone();
+                    match addr {
+                        Val::Pointer(inner) => {
+                            let buffer = env.get_memory(inner.base);
+                            assert!(num >= 0, "expect a non-negative array size");
+                            for i in 0..num {
+                                assert!(inner.offset_within + (i as usize) < inner.size,
+                                        "`putarray` access memory out of bounds"
+                                );
+                                let load_val =  buffer[inner.offset_within + i as usize].clone();
+                                match load_val {
+                                    Val::Integer(inner) => print!(" {}", inner),
+                                    _ => panic!("`putarray` accept a non integer array")
+                                }
+                            }
+                            Ok(Val::Unit)
+                        },
+                        _ => Err(ExecutionError::InternalError(String::from("`getarray` accepts 1 pointer type argument only")))
+                    }
+                },
+                "starttime" | "stoptime" => {
+                    print!("Warning: `starttime` and `stoptime` do nothing in interpreter");
+                    Ok(Val::Unit)
+                },
+                _ => {
+                    let func_ref = module.get_function_ref(&inner.callee);
+                    run_on_function(
+                        env,
+                        module,
+                        func_ref,
+                        args_val)
+                }
+            }
         },
         ValueKind::Alloca(inner) => {
             let function = env.get_top_function(module);

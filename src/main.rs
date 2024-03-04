@@ -4,8 +4,6 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::str::FromStr;
 use nom::*;
-// use ariadne::*;
-// use chumsky::prelude::*;
 use clap::Parser;
 
 use accipit::{
@@ -13,7 +11,6 @@ use accipit::{
         token::{Tokens, Token},
         lexer,
         parser,
-        // new_lexer::lexer,
     },
     ir::{
         builders::IRBuilder,
@@ -85,21 +82,7 @@ fn main() -> Result<(), ()>{
         .map_err( | _ | ()).unwrap();
     let entry_fn = args.entry;
     let interpreted = run_on_module(&mut prog_env, &module, &entry_fn, input_args);
-    println!("Interepted: {:?}", interpreted);
+    println!("\nInterepted: {:?}", interpreted);
     Ok(())
 
-    // lex_errs.into_iter()
-    //     .map(| e | e.map_token(| c | c.to_string()))
-    //     .for_each(| e | {
-    //         Report::build(ReportKind::Error, filename.clone(), e.span().start)
-    //             .with_message(e.to_string())
-    //             .with_label(
-    //                 Label::new((filename.clone(), e.span().into_range()))
-    //                     .with_message(e.to_string())
-    //                     .with_color(Color::Red)
-    //             )
-    //             .finish()
-    //             .print(sources([(filename.clone(), src.clone())]))
-    //             .unwrap()
-    //     });
 }

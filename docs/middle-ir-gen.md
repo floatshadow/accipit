@@ -408,6 +408,47 @@ if (exp) {
 </tbody>
 </table>
 
+## 解释器
+
+为了检测生成的中间代码生成正确性和评测，我们为大家提供了一个该中间表示的解释器。
+
+> 尽管我们对于解释器的代码有过一些测试，但面对大家使用的实际情况，很难保证没有新的问题。如果你发现生成的中间代码不能被正确的执行，请及时联系助教
+
+### 使用方法
+
+```
+Usage: accipit [OPTIONS] <FILE> [ARGS]...
+
+Arguments:
+  <FILE>     Specify the input file
+  [ARGS]...  Specify the argument passes to the entry function
+
+Options:
+  -o, --output <OUTPUT>  Specify the output file
+  -e, --entry <ENTRY>    Specify the certain function as the entry function [default: main]
+  -h, --help             Print help
+  -V, --version          Print version
+```
+
+解释器支持直接调用某个函数，并在命令行内传入函数参数：
+
+```bash
+$ accipit examples/factorial.acc --entry factorial 10
+...
+Interepted: Ok(Integer(3628800))
+```
+
+如果不指定调用某个函数，则默认从 `main` 开始，从 stdin/stdout 输入输出：
+
+```bash
+$ accipit examples/factorial.acc
+...
+# `getint` waiting for input
+10
+# `putint` print result
+3628800
+Interepted: Ok(Unit)
+```
 
 ## 你的任务
 
