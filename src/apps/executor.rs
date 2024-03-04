@@ -325,7 +325,7 @@ impl ProgramEnv {
     }
 
     pub fn set_val(&mut self, val_ref: ValueRef, value: Val) -> Option<Val> {
-        self.search_value_env_mut(val_ref)
+        self.get_top_frame_mut()
             .expect("cannot find value in current scope")
             .set_local_val(val_ref, value)
     }
@@ -671,7 +671,7 @@ pub fn run_on_module(
     entry_fn: &str,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
-    let mut global_frame = env.get_global_frame_mut();
+    let global_frame = env.get_global_frame_mut();
     // set all constant value
     module.value_ctx
         .iter()

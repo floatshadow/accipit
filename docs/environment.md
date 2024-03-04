@@ -59,7 +59,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```bash
 git clone https://git.zju.edu.cn/accsys/accipit
 cd accipit
-cargo run -- examples/factorial.acc
+cargo run -- examples/factorial.acc --entry factorial 10
 ```
 输出形如
 ```
