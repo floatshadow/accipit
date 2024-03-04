@@ -50,8 +50,8 @@ fn main() -> Result<(), ExecutionError>{
     println!("Module:\n{}", module);
 
     let mut prog_env = ProgramEnv::new();
-    let args = vec![Val::Integer(1), Val::Integer(2)];
-    let interpreted = run_on_module(&mut prog_env, &module, "load_store_alloca_offset", args);
+    let args = vec![Val::Integer(10)];
+    let interpreted = run_on_module(&mut prog_env, &module, "factorial", args);
     println!("Interepted: {:?}", interpreted);
     Ok(())
 

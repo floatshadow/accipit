@@ -190,51 +190,152 @@ impl Val {
     }
 }
 
-pub struct ProgramEnv {
-    pub val_env: SecondaryMap<ValueRef, Val>,
-    pub memory: SecondaryMap<ValueRef, Vec<Val>>,
+pub struct Frame {
+    pub frame_val_env: SecondaryMap<ValueRef, Val>,
+    pub frame_memory: SecondaryMap<ValueRef, Vec<Val>>,
+    pub working_function: Option<FunctionRef>
+}
 
-    pub working_function: Option<FunctionRef>,
+impl Frame {
+    pub fn new(working_function: FunctionRef) -> Frame {
+        Frame {
+            frame_val_env: SecondaryMap::new(),
+            frame_memory: SecondaryMap::new(),
+            working_function: Some(working_function)
+        }
+    }
+
+    pub fn new_global() -> Frame {
+        Frame {
+            frame_val_env: SecondaryMap::new(),
+            frame_memory: SecondaryMap::new(),
+            working_function: None
+        }
+    }
+
+    pub fn set_local_val(&mut self, val_ref: ValueRef, value: Val) -> Option<Val> {
+        self.frame_val_env.insert(val_ref, value) 
+    }
+
+    pub fn get_local_val(&self, value_ref: ValueRef) -> &Val {
+        self.frame_val_env.get(value_ref).unwrap()
+    }
+
+    pub fn get_local_memory(&self, base: ValueRef) -> &Vec<Val> {
+        self.frame_memory.get(base).unwrap()
+    }
+
+    pub fn get_local_memory_mut(&mut self, base: ValueRef) -> &mut Vec<Val> {
+        self.frame_memory.get_mut(base).unwrap()
+    }
+}
+
+pub struct ProgramEnv {
     /// current working basic block.
     pub position: Option<BlockRef>,
     /// program counter.
     pub program_counter: Option<ValueRef>,
-    pub frames: Vec<FunctionRef>
+    pub frames: Vec<Frame>
 }
 
 impl ProgramEnv {
-    pub fn set_val(&mut self, val_ref: ValueRef, value: Val) -> Option<Val> {
-        self.val_env.insert(val_ref, value) 
+    pub fn get_top_frame(&self) -> Option<&Frame> {
+        self.frames.last()
     }
 
-    pub fn get_val(&self, value_ref: ValueRef) -> &Val {
-        self.val_env.get(value_ref).unwrap()
+    pub fn get_top_frame_mut(&mut self) -> Option<&mut Frame> {
+        self.frames.last_mut()
+    }
+
+    pub fn get_global_frame(&self) -> Option<&Frame> {
+        self.frames.first()
+    }
+
+    pub fn get_global_frame_mut(&mut self) -> Option<&mut Frame> {
+        self.frames.first_mut()
+    }
+
+    fn search_value_env(
+        &self,
+        val_ref: ValueRef
+    ) -> Option<&Frame> {
+        let top_frame = self.get_top_frame().expect("no active frame");
+        if top_frame.frame_val_env.contains_key(val_ref) {
+            self.get_top_frame()
+        } else {
+            let global_frame = self.get_global_frame().expect("no global frame");
+            if global_frame.frame_val_env.contains_key(val_ref) {
+                self.get_global_frame()
+            } else {
+                None
+            }
+        }
+        
+    }
+
+    fn search_value_env_mut(
+        &mut self,
+        val_ref: ValueRef
+    ) -> Option<&mut Frame> {
+        let top_frame = self.get_top_frame().expect("no active frame");
+        if top_frame.frame_val_env.contains_key(val_ref) {
+            self.get_top_frame_mut()
+        } else {
+            let global_frame = self.get_global_frame_mut().expect("no global frame");
+            if global_frame.frame_val_env.contains_key(val_ref) {
+                self.get_global_frame_mut()
+            } else {
+                // slient return top frame assume set the `val`` of a new `value`
+                self.get_top_frame_mut()
+            }
+        }
+        
+    }
+
+    pub fn set_val(&mut self, val_ref: ValueRef, value: Val) -> Option<Val> {
+        self.search_value_env_mut(val_ref)
+            .expect("cannot find value in current scope")
+            .set_local_val(val_ref, value)
+    }
+
+    pub fn get_val(&self, val_ref: ValueRef) -> &Val {
+        self.search_value_env(val_ref)
+            .expect("cannot find value in current scope")
+            .get_local_val(val_ref)
     }
 
     pub fn get_top_function<'a>(&'a self, module: &'a Module) -> &Function {
-        module.get_function(self.working_function.expect("no function is running"))
+        module.get_function(
+            self.get_top_frame()
+            .expect("no active frame")
+            .working_function
+            .expect("global variable scope, no function is active"))
     }
 
     pub fn get_memory(&self, base: ValueRef) -> &Vec<Val> {
-        self.memory.get(base).unwrap()
+        self.search_value_env(base)
+            .expect("cannot find value in current scope")
+            .get_local_memory(base)
     }
 
     pub fn get_memory_mut(&mut self, base: ValueRef) -> &mut Vec<Val> {
-        self.memory.get_mut(base).unwrap()
+        self.search_value_env_mut(base)
+            .expect("cannot find value in current scope")
+            .get_local_memory_mut(base)
     }
 
     pub fn initialize_memory(&mut self, base: ValueRef, size: usize) {
         let unitialized_object = vec![Val::Undefined; size];
-        self.memory.insert(base, unitialized_object);
+        self.search_value_env_mut(base)
+            .expect("cannot find value in current scope")
+            .frame_memory
+            .insert(base, unitialized_object);
     }
 }
 
 impl ProgramEnv {
     pub fn new() -> ProgramEnv {
         ProgramEnv {
-            val_env: SecondaryMap::new(),
-            memory: SecondaryMap::new(),
-            working_function: None,
             position: None,
             program_counter: None,
             frames: Vec::new()
@@ -249,6 +350,7 @@ pub fn single_step(
     value: ValueRef 
 ) -> Result<Val, ExecutionError> {
     let value_data = module.get_value(value);
+    println!("single step on `{}`", value_data);
     match &value_data.kind {
         ValueKind::Binary(inner) => {
             let lhs = env.get_val(inner.lhs);
@@ -412,8 +514,7 @@ pub fn run_on_function(
     function: FunctionRef,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
-    env.frames.push(function);
-    env.working_function = Some(function);
+    env.frames.push(Frame::new(function));
     let function = module.func_ctx.get(function).unwrap();
     // set args values
     let params: Vec<Val> = args
@@ -436,6 +537,7 @@ pub fn run_on_function(
         let block = function.blocks_ctx.get(current_bb).unwrap();
         bb_exit_val = run_on_basicblock(env, module, block)?;
     };
+    env.frames.pop();
     Ok(bb_exit_val)
 
 }
@@ -447,20 +549,23 @@ pub fn run_on_module(
     entry_fn: &str,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
+    let mut global_frame = Frame::new_global();
     // set all constant value
     module.value_ctx
         .iter()
         .for_each(| (value, value_data) | {
             match &value_data.kind {
                 ValueKind::ConstantInt(inner) =>
-                    env.set_val(value, Val::Integer(inner.value)),
+                    global_frame.set_local_val(value, Val::Integer(inner.value)),
                 ValueKind::ConstantBool(inner) =>
-                    env.set_val(value, Val::Bool(inner.value)),
+                    global_frame.set_local_val(value, Val::Bool(inner.value)),
                 ValueKind::ConstantUnit(_) =>
-                    env.set_val(value, Val::Unit),
+                    global_frame.set_local_val(value, Val::Unit),
                 _ => None,
             };
         });
+    env.frames.push(global_frame);
+
     let function = module.get_function_ref(entry_fn);
     run_on_function(env, module, function, args)
 }

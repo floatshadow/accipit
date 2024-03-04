@@ -2,38 +2,59 @@
 
 /* IO function, implemented by external runtime.
  */
-fn %read_i32() -> i32;
+fn %getint() -> i32;
 
-fn %write_i32(#value: i32) -> ();
+fn %putint(#value: i32) -> ();
 
 
 fn %factorial(#n: i32) -> i32 {
 %Lentry:
-    /* Create a stack slot of i32 type as the space of the return value.
-     * if n equals 1, store `1` to this address, i.e. `return 1`,
-     * otherwise, do recursive call, i.e. return n * factorial(n - 1).
-     */
-    let %ret.addr: i32* = alloca i32, 1
-    let %cmp: i1 = eq #n: i32, 0
-    br i1 %cmp, label %Ltrue, label %Lfalse
+    // create a stack slot of i32 type as the space of the return value.
+    // if n equals 1, store `1` to this address, i.e. `return 1`,
+    // otherwise, do recursive call, i.e. return n * factorial(n - 1).
+    let %ret.addr = alloca i32, 1
+    // store function parameter on the stack.
+    let %n.addr = alloca i32, 1
+    let %4: () = store #n, %n.addr
+    // create a slot for local variable ans, uninitialized.
+    let %ans.addr = alloca i32, 1
+    // when we need #n, you just read it from %n.addr.
+    let %6 = load %n.addr
+    // comparison produce an `i8` value.
+    let %cmp = eq %6, 0
+    br %cmp, label %Ltrue, label %Lfalse
 %Ltrue:
-    let %6: () = store 1, %ret.addr
+    // retuen value = 1.
+    let %10 = store 1, %ret.addr
     jmp label %Lret
 %Lfalse:
-    let %9: i32 = sub #n: i32, 1
-    let %res: i32 = call fn %factorial, %9
-    let %11: i32 = mul %9, %res
-    let %12: () = store %11: i32, %ret.addr
+    // n - 1
+    let %13 = load %n.addr
+    let %14 = sub %13, 1
+    // factorial(n - 1)
+    let %res = call %factorial, %14
+    // n
+    let %16 = load %n.addr
+    // n * factorial(n - 1)
+    let %17 = mul %16, %res
+    // write local variable `ans`
+    let %18 = store %17, %ans.addr
+    // now we meets `return ans`, which means we
+    // should first read value from `%ans.addr` and then
+    // write it to `%ret.addr`.
+    let %19 = load %ans.addr
+    let %20 = store %19, %ret.addr
     jmp label %Lret
 %Lret:
-    let %ret.val: i32 = load %ret.addr: i32*
-    ret %ret.val: i32
+    // load return value from %ret.addr
+    let %ret.val = load %ret.addr
+    ret %ret.val
 }
 
 fn %main() -> () {
 %Lentry:
-    let %n: i32 = call fn %read_i32
-    let %res = call fn %factorial, %n
-    let %4 = call fn %write_i32, %res
+    let %n = call %getint
+    let %res = call %factorial, %n
+    let %4 = call %putint, %res
     ret ()
 }

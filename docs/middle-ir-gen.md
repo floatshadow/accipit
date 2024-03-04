@@ -45,49 +45,48 @@ int factorial(int n) {
 
 参考中间代码：
 ```rust
-
 fn %factorial(#n: i32) -> i32 {
 %Lentry:
     // create a stack slot of i32 type as the space of the return value.
     // if n equals 1, store `1` to this address, i.e. `return 1`,
     // otherwise, do recursive call, i.e. return n * factorial(n - 1).
-    let %ret.addr: i32* = alloca i32, 1
+    let %ret.addr = alloca i32, 1
     // store function parameter on the stack.
-    let %n.addr: i32* = alloca i32, 1
+    let %n.addr = alloca i32, 1
     let %4: () = store #n, %n.addr
     // create a slot for local variable ans, uninitialized.
-    let %ans.addr: i32* = alloca i32, 1
+    let %ans.addr = alloca i32, 1
     // when we need #n, you just read it from %n.addr.
-    let %6: i32 = load %n.addr
+    let %6 = load %n.addr
     // comparison produce an `i8` value.
-    let %cmp: i1 = eq %6, 0
-    br i1 %cmp, label %Ltrue, label %Lfalse
+    let %cmp = eq %6, 0
+    br %cmp, label %Ltrue, label %Lfalse
 %Ltrue:
     // retuen value = 1.
-    let %10: () = store 1, %ret.addr
+    let %10 = store 1, %ret.addr
     jmp label %Lret
 %Lfalse:
     // n - 1
-    let %13: i32 = load %n.addr
-    let %14: i32 = sub %13, 1
+    let %13 = load %n.addr
+    let %14 = sub %13, 1
     // factorial(n - 1)
-    let %res: i32 = call fn %factorial, %14
+    let %res = call %factorial, %14
     // n
     let %16 = load %n.addr
     // n * factorial(n - 1)
-    let %17: i32 = mul %16, %res
+    let %17 = mul %16, %res
     // write local variable `ans`
-    let %18: () = store %17, %ans.addr
+    let %18 = store %17, %ans.addr
     // now we meets `return ans`, which means we
     // should first read value from `%ans.addr` and then
     // write it to `%ret.addr`.
-    let %19: i32 = load %ans.addr
-    let %20: () = store %19, %ret.addr
+    let %19 = load %ans.addr
+    let %20 = store %19, %ret.addr
     jmp label %Lret
 %Lret:
     // load return value from %ret.addr
-    let %ret.val: i32 = load %ret.addr: i32*
-    ret %ret.val: i32
+    let %ret.val = load %ret.addr
+    ret %ret.val
 }
 ```
 

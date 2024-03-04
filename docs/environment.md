@@ -59,13 +59,13 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```bash
 git clone https://git.zju.edu.cn/accsys/accipit
 cd accipit
-cargo run -- examples/add.acc
+cargo run -- examples/factorial.acc
 ```
 输出形如
 ```
 ...
 
-Interepted: Ok(Integer(2))
+Interepted: Ok(Integer(3628800))
 ```
 
 ### Runtime 编译

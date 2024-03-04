@@ -266,7 +266,7 @@ impl IRBuilder {
         match name {
             Some(bb_name) => {
                 if let Some(dangling_bb_ref) = self.get_block_ref(&bb_name) {
-                    println!("find dangling basic block {}\n", bb_name);
+                    println!("find dangling basic block `%{}`\n", bb_name);
                     let current_function = self.get_current_function_data_mut();
                     current_function.append_back_dangling_basic_block(dangling_bb_ref);
                     dangling_bb_ref
@@ -302,27 +302,28 @@ impl IRBuilder {
             "`lhs` and `rhs` should be the same integer type for {}",
             inner_name
         );
+        let expected_ty = match op {
+            values::BinaryOp::Add | values::BinaryOp::Sub |
+            values::BinaryOp::Mul | values::BinaryOp::Div | values::BinaryOp::Rem |
+            values::BinaryOp::And | values::BinaryOp::Or | values::BinaryOp::Xor =>
+                lhs_ty,
+            values::BinaryOp::Lt | values::BinaryOp::Gt |
+            values::BinaryOp::Le | values::BinaryOp::Ge |
+            values::BinaryOp::Eq | values::BinaryOp::Ne =>
+                Type::get_i1()
+        };
         let result_ty = match annotated_type {
             Some(check_ty) => {
                 assert!(
-                    lhs_ty.eq(&check_ty),
+                    expected_ty.eq(&check_ty),
                     "expect type `{}` for `{}`, but found wrong annotation `{}`", 
-                    lhs_ty, inner_name, check_ty
+                    expected_ty, inner_name, check_ty
                 );
-                match op {
-                    values::BinaryOp::Add | values::BinaryOp::Sub |
-                    values::BinaryOp::Mul | values::BinaryOp::Div | values::BinaryOp::Rem |
-                    values::BinaryOp::And | values::BinaryOp::Or | values::BinaryOp::Xor =>
-                        lhs_ty,
-                    values::BinaryOp::Lt | values::BinaryOp::Gt |
-                    values::BinaryOp::Le | values::BinaryOp::Ge |
-                    values::BinaryOp::Eq | values::BinaryOp::Ne =>
-                        Type::get_i1()
-                }
+                check_ty
             },
-            None => lhs_ty
+            None => expected_ty
         };
-
+        println!("binexpr `{}` result type `{}`", op, result_ty);
         let mut binexpr = values::Binary::new(result_ty, op, lhs, rhs);
         binexpr.set_name(inner_name);
         self.insert_instruction_symbol(binexpr)
@@ -527,7 +528,7 @@ impl IRBuilder {
             .unwrap();
 
         assert!(cond_value.ty.is_i1_type(),
-                "expect condition value i1 type in branch terminator, but found type `{}`",
+                "expect condition value type `i1` in branch terminator, but found type `{}`",
                 cond_value.ty.clone());
         let current_function = self.module
             .func_ctx
@@ -561,7 +562,7 @@ impl IRBuilder {
         match expected_ret_ty {
             TypeKind::Function(_, ret_ty) =>
                 assert!(ret_value.ty.eq(&ret_ty),
-                        "expected return value {} type, but found {} type",
+                        "expected return value type `{}`, but found type `{}`",
                         ret_ty.clone(),
                         ret_value.ty.clone()),
             _ => ()

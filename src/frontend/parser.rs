@@ -324,10 +324,10 @@ impl<'a, 'b: 'a> Parser {
             token(Token::TkFnCall),
                     tuple((
                         parse_symbol,
-                        separated_list0(
+                        many0(preceded(
                             token(Token::Comma),
                             | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
-                        )
+                        ))
                     ))
         )(input)?;
 
@@ -378,10 +378,9 @@ impl<'a, 'b: 'a> Parser {
             token(Token::TKBranch),
             tuple((
                 | token: Tokens<'a> | Parser::parse_value(token, builder.clone()),
-                separated_pair(
-                    preceded(token(Token::KwLabel),   identifier),
-                    token(Token::Comma),
-                    preceded(token(Token::KwLabel),   identifier)
+                pair(
+                    preceded(token(Token::Comma), preceded(token(Token::KwLabel),   identifier)),
+                    preceded(token(Token::Comma), preceded(token(Token::KwLabel),   identifier))
                 )
             ))
         )(input)?;
