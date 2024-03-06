@@ -7,12 +7,13 @@
 
 但是，IR 的作用并不仅限于减少编译器开发的工作量，在现代编译器架构下，具体体现在 IR 所指代的对象宽泛化了，现在 IR 通常可以用于泛指“源代码”与“目标平台汇编”之间的各种表示形式，例如抽象语法树、目标无关的中间代码、三地址码风格的类机器代码层等：
 
-- 抽象语法树 AST，树形结构，贴近源代码层，适合做语法糖的展开、构建符号表、类型检查等靠近编程语言的高层级抽象的任务。
-同时，也更容易利用这些信息做一些高层次的优化，换句话说他们和程序语言的设计风格息息相关.
-例如在 AST 层级，通常是结构化控制流（例如 while loop, for loop, if, switch，函数式风格的可能有 parallel, reduce, yield 等），模式匹配 (pattern match) 就可以被展开为一棵高效的决策树 (decison tree)，减少多余的比较和跳转.
-- 目标无关的中间代码（**我们在这里**），常见的设计是线性指令. 由于是平台无关的，设计上通常会考虑屏蔽底层细节；由于考虑适配多语言前端的需要，抛弃了多数高层级信息，更为贴合底层汇编.
-在这一层级，一般则为非结构化控制流（例如无条件跳转 jump，分支跳转 branch 等），一般进行例如常量传播、公共子表达式折叠、不变式归纳等与硬件细节无关的优化.
-以及控制流分析、数据流分析、别名分析等普适的分析.
+- 抽象语法树 AST，树形结构，贴近源代码层，适合做语法糖的展开、构建符号表、类型检查等靠近编程语言的高层级抽象的任务.
+它们和程序语言的设计风格息息相关，因此能够做一些更抽象、更高级的优化.
+例如，AST 层级仍然保留结构化控制流（例如 while loop, for loop, if, switch，函数式风格的可能有 parallel, reduce, yield 等）信息，模式匹配 (pattern match) 就可以被展开为一棵高效的决策树 (decison tree)，减少多余的比较和跳转.
+- 目标无关的中间代码（**我们在这里**），常见的设计是线性指令.
+由于是平台无关的，设计上通常会考虑屏蔽底层细节；由于考虑适配多语言前端的需要，抛弃了多数高层级信息，更为贴合底层汇编.
+例如 LLVM IR 在形式上就非常类似 RISC 汇编，但是仍然有 GEP 这样的高级指令.
+在这一层级，通常只剩下了非结构化控制流（例如无条件跳转 jump，分支跳转 branch 等），进行例如常量传播、公共子表达式折叠、不变式归纳等与硬件细节无关的优化，以及控制流分析、数据流分析、别名分析等普适的分析.
 - 三地址码风格的类机器代码层，形式上非常接近汇编，甚至可以直接按照汇编指令的格式设计.
 这一层非常靠近硬件，优化需要考虑不同指令的延迟、吞吐量、流水线、ABI 等，许多问题是 NP-Hard 的.
 
@@ -25,8 +26,8 @@
 
 ## 中间代码的定义
 
-本实验的 IR 是类似 LLVM IR 的 partial SSA 形式，具体的规范请参阅[Accipit IR 规范](accipit-spec.md).
-我们在附录还停供了一些样例：[SysY 结构与 Accipit IR 的对应](sysy-accipit-mapping.md)，为你演示如何从 SysY 前端的高层级结构是如何翻译到 Accipit IR 的。
+本实验的 IR 是类似 LLVM IR 的 partial SSA 形式，即利用 `alloca` `load` `store` 三条指令在 SSA 形式上“开洞”，具体的规范请参阅[Accipit IR 规范](accipit-spec.md).
+我们在附录还提供了一些样例：[SysY 结构与 Accipit IR 的对应](sysy-accipit-mapping.md)，为你演示如何从 SysY 前端的高层级结构翻译到 Accipit IR。
 
 下面这段阶乘的样例代码能帮助你实现一个功能正确（虽然显然欠优化的）的中端代码.
 
@@ -92,7 +93,7 @@ fn %factorial(#n: i32) -> i32 {
 
 ### 基本块的处理
 
-基本块是划分控制流的边界，基本块内指令有序地线性执行，控制流跳转只存在于基本块之间，这种关系使得基本块之间连成一个有向图，一般称为控制流图 (Contorl Flow Graph，简称 CFG).
+基本块是划分控制流的边界，基本块内指令有序地线性执行，控制流跳转只存在于基本块之间，这种关系使得基本块之间连成一个有向图，一般称这个有向图为控制流图 (Contorl Flow Graph，简称 CFG).
 例如：`if` 的两个分支分别翻译到两个基本块 `Ltrue` 与 `Lfalse`.
 
 ![CFG](images/factorial.svg)
@@ -106,12 +107,12 @@ $ clang -S -emit-llvm file.c -o file.bc
 $ opt -dot-cfg -disable-output -enable-new-pm=0 file.bc
 Writing '.file.dot'...
 # dot render png file
-$ dot -Tpng -o test.png .test.dot
+$ dot -Tpng -o file.png .file.dot
 ```
 
 在 `if` 分支入口前，有一个基本块作为入口，计算 `if` 条件的真假，即 `%cmp`； 
 在 `if` 的两个分支结束后，控制流进行了“合并”，处理下一个语句块，进行一个无条件跳转 `br label %ret`，来到了出口基本块 `%ret`.
-这是结构化控制流通常的处理方式，你可以将其类推到 `while` 循环，下面是一个示意图：
+这是结构化控制流通常的处理思路，你可以将其类推到 `while` 循环，下面是一个示意图：
 
 ![while](images/while.svg)
 
@@ -119,7 +120,7 @@ $ dot -Tpng -o test.png .test.dot
 
 最简单的实现方式是为所有局部作用域的变量都开辟一块栈上的空间，读局部变量就是 load 对应的地址（IR 中即为 alloca 获取的指针类型的值），写局部变量就是把结果 store 入对应的地址.
 
-如果你还不明白，请看下面的示意图：
+如果你还不明白，请看下面的示意图并佐以[SysY 结构与 Accipit IR 的对应](appendix/sysy-accipit-mapping.md)：
 
 ![frame](images/frame.svg)
 
@@ -132,9 +133,11 @@ $ dot -Tpng -o test.png .test.dot
 
 ### 表达式生成
 
-正如前面所述，每条指令实际上定义了一个新的变量，因此可以使用指令本身来表示变量，在 Accipit IR 中，值 (value) 包括变量和常数，因此我们先定义 `Value` 类型：
+正如前面所述，每条指令实际上定义了一个新的变量，因此可以使用指令本身来表示变量，在 Accipit IR 中，值 (value) 包括变量和常数.
 
-!!! tip "附：实现建议"
+我们先定义 `Value` 类型，并给出一些可供参考的实现方式：
+
+!!! tip "实现建议"
     === "C"
         C 通常使用 enum + union：
 
@@ -190,10 +193,10 @@ $ dot -Tpng -o test.png .test.dot
 
     === "C++"
         C++ 可以使用 `std::variant` 来代替 C 的 enum + union 来实现 “类型安全” 的 tagged union，具体可以看 [cpp reference](https://en.cppreference.com/w/cpp/utility/variant)。
-        简单来说，当一个 Value 实际上是 `kind_constant_int32` 类型，但是你错误地使用了处理 `kind_binary_expression` 的函数处理它，就会错误地把这个 Value 的 field 当作 `kind_binary_expression` 来处理，于是可能会得出错误的结果，但是不论是编译时还是运行时都不会对此产生任何的报错。
-        `std::variant` 会在上述情况发生时扔出异常，方便你 debug。
+        简单来说，当一个 Value 实际上是 `kind_constant_int32` 类型，但是你错误地使用了处理 `kind_binary_expression` 类型的函数处理它，就会错误地把这个 Value 当作二元表达式来处理，因此得出错误的结果，然而不论是编译时还是运行时都不会对这样的误用产生任何的报错。
+        而 `std::variant` 会在上述情况发生时扔出异常，方便你 debug。
 
-        此外 C++ 可以使用面对对象实现：
+        除了 C 风格，C++ 可以使用面对对象实现：
 
         ```cpp
         class Value {
@@ -225,7 +228,7 @@ $ dot -Tpng -o test.png .test.dot
             例如，我一个打印 IR 的函数叫做 `print_value`，给 Value 声明一个虚成员函数 `virtual void print_value()`，然后每个 Value 的子类继承时重载这个函数，这样我们就可以对所有 Value 类型的变量直接调用 `value->print_value()` 即可.
             但是缺点是，你永远不可能知道你到底需要多少这样的处理 Value 的函数，新增一个 `Value::foo()`，你就要回过头去修改所有 Value 以及子类的声明；再新增一个 `Value::bar()`，你还要重复上面的事情.
             这样很麻烦，而且也不优雅.
-            总得来说，只适合 print 这样比较确定和固定的操作.
+            因此虚函数只适合类似 print 必要的和功能固定的操作.
 
         * 使用 RTTI（可行，~~自己看着用.jpg~~）
 
@@ -235,11 +238,11 @@ $ dot -Tpng -o test.png .test.dot
         
         * 使用模板黑魔法（推荐，写起来优雅，~~不得不品尝的环节出现了，大雾~~）
 
-            ~~下面这个方法真的不是很好笑~~，这个方法不需要 C++ 的 RTTI，而且运行足够快，但是需要用到用到 C++ 11 的 `type_traits`标准库和一点点模板魔法，可能比较难理解：
+            这个方法不需要 C++ 的 RTTI，本质上仍然是 C 风格的 “enum + union”，但是更安全，只需要用到用到 C++ 11 的 `type_traits` 标准库和一点点模板魔法.
 
-            首先，常见的做法是新建一个 `common.def`，然后定义宏：
+            首先，常见的做法是新建一个 `Common.def`，然后定义宏：
 
-            ```cpp title="common.def"
+            ```cpp title="Common.def"
             #ifndef ValueKindDefine
             #define ValuKindDefine(x)
             #endif
@@ -265,7 +268,7 @@ $ dot -Tpng -o test.png .test.dot
             };
             ```
 
-            这样我们就完成了类似 C 中 value_kind 的 enum 定义，然后在基类 Value 中保存一个 `value_kind` 的字段，这个字段标识了 Value 具体是哪个类型，你还可以利用 C++ 11 的初始化静态成员语法来给所有 Value 的子类初始化 `value_kind` 字段：
+            这样我们就完成了类似 C 中 value_kind 的 enum 定义，然后在基类 Value 中添加 `value_kind` 字段，这个字段标识了这个 Value 具体是哪个类型，你还可以利用 C++ 11 的初始化静态成员语法来给所有 Value 的子类初始化 `value_kind` 字段：
 
             ```cpp title="Value.h"
             class Value {
@@ -302,7 +305,8 @@ $ dot -Tpng -o test.png .test.dot
                 bool is() {
                     return value_type == std::remove_pointer_t<T>::this_kind;
                 }
-                template <typename T> T as() {
+                template <typename T>
+                T as() {
                     if (is<T>()) {
                         return static_cast<T>(this);
                     } else {
@@ -341,10 +345,10 @@ $ dot -Tpng -o test.png .test.dot
             ```cpp
             // `std::remove_pointer_t<ConstantInt *>` gets `ConstantInt`
             if (constant_int->value_kind == ConstantInt::this_kind) {
-                // safe cast
+                // safe cast, or ...
                 return (ConstantInt *)(this);
             } else {
-                // else return nullptr as failure
+                // return nullptr as failure
                 return nullptr;
             }
             ```
@@ -355,6 +359,43 @@ $ dot -Tpng -o test.png .test.dot
             **注意**: `std::remove_pointer_t` 是必须的，因为我们通常会和 `Value *` 类型打交道，而不是 `Value` 本身.
             你会发现 `is` 使用的模板参数是 Value 的子类型本身，而 `as` 通常用的是 Value 子类型的指针.
 
+            完成了上述基础设施之后，下面我们来看怎么处理不同的 Value 类型，考虑 print 操作：
+
+            * 一是 C 风格的 switch 分发：
+
+                ```cpp title="IRPrinter.cpp"
+                void printValue(Value *V) {
+                    switch (V->value_kind) {
+                #define ValueTypeDefine(type) \
+                    case x: print##type(V);   \
+                            break;
+                #include "Common.def"
+                    default:
+                        /* ... */
+                    }
+                }
+
+
+                // Individual function for each value kind.
+                void printSV_ConstantInt(Value *V) { /* ... */ }
+                void printSV_BinaryExpr(Value *V) { /* ... */ }
+                ```
+
+            * 一是用上面的 "if + as" 结构：
+
+                ```cpp title="IRPrinter.cpp"
+                void printValue(Value *V) {
+                    if (auto *C = V->as<ConstantInt *>()) {
+                        C->foo();
+                    }
+
+                    if (auto *B = V->as<BinaryExpr *>()) {
+                        B->bar();
+                    }
+
+                    /* ... */
+                }
+                ``` 
 
     === "OCaml"
         ML 系语言以及 Rust 都支持代数数据类型 (Algebraic Data Type)，可以很方便地定义：
@@ -379,10 +420,10 @@ translate_expr(expr, symbol_table, basic_block) -> value
 ```
 
 `translate_expr` 将表达式翻译到中端 IR 的 value.
-其中 `symbol_table` 是符号表，通常维护一个 `string -> value` 的映射，虽然上文提到，在类似 SSA 的形式下，变量的名字并不重要，但是在处理局部变量时我们为每个局部变量分配一个栈上的位置，需要记录变量名字到对应 alloca 指令的映射.
-重复命名的变量，如在一个语句块里定义的变量和外层的变量重名时，你需要自行处理.
+其中 `symbol_table` 是符号表，维护一个 `string -> value` 的映射，虽然在类似 SSA 的形式下，变量的名字并不重要，但是在处理局部变量时，我们要每个局部变量分配一个栈上的地址，为此我们需要记录变量名字到对应 alloca 指令的映射.
+对于重复命名的变量，如在一个语句块里定义的变量和外层的变量重名时，请你自行处理.
 
-由于 `translate_expr` 是生成线性的指令流，需要传入基本块信息，来指定指令生成在哪个基本块.
+由于 `translate_expr` 只是翻译表达式，没有任何控制流转移，因此只会生成线性的指令流，因此考虑传入基本块信息 `basic_block`，来指定翻译得到的指令序列插入在哪个基本块.
 
 面对形如 `expr1 + expr2` 这样的二元表达式，我们递归调用两个子节点的 `translate_expr`，然后生成一条加法指令将他们加起来，最后 `result_value` 将作为 `translate_expr` 的返回值：
 
@@ -454,20 +495,21 @@ return create_function_call(function, args_list, basic_block);</code></pre></td>
 </tbody>
 </table>
 
-其中 `create_load` `create_binary` `create_function_call` 是生成指令的接口，它们的最后一个参数是基本块 `basic_block`，表示指令在这个基本块中插入，由于基本块中指令是线性的，你可以在基本块中维护一个 `vector`，不断加入指令即可，类似于：
+其中 `create_load` `create_binary` `create_function_call` 是生成指令的接口，它们的最后一个参数是基本块 `basic_block`，表示指令在基本块 `basic_block` 中插入，由于基本块中指令是线性的，你可以在基本块中维护一个 `vector`，在末端不断加入指令即可，类似于：
 
 ```cpp
 void insert_instruction(Instruction *inst, BasicBlock *block) {
     std::vector<Instruction *> &instrs = block.getInstrs();
-    instrs.push_bakc(inst);
+    instrs.push_back(inst);
 }
 ```
 
 ??? tip "数据结构对 IR 的影响"
-    使用类似数组的数据结构存放指令，有利于提高 cache 的命中率，使得遍历指令会很快.
-    但是同时，如果你同时考虑进行中端的目标无关代码优化，那么你就会需要频繁地删除某些指令、在中间插入某些指令，或者将几条指令替换成更高效的指令，在这种情况下使用双端链表存放指令能够非常方便地实现上面这些操作.
-    当然也有例外，由于双端链表访问指令不如数组快，因此在 JIT 编译器中可能变成了减分项，WebKit B3 JIT compiler 就将后端原来的 LLVM IR 换成了新的 B3 IR，B3 IR 使用数组存储，因此上面的优化引入了一个额外的 `InsertionSet` 的数据结构，记录优化 Pass 中所有的变化并在最后进行统一插入更新.
-    如果你感兴趣，可以看 [WebKit Blog](https://webkit.org/blog/5852/introducing-the-b3-jit-compiler/)
+    使用类似数组的数据结构存放指令序列，能够提高 cache 的命中率，这样我们遍历指令就会很快，而且实现足够简单，足够你完成本课程的实验.
+    但是，如果你考虑进行中端的目标无关代码优化，那么你需要频繁地删除某些指令，在中间插入某些指令，或者将几条指令替换成更高效的指令，而双端链表相比数组更容易实现上面这些操作，因此 LLVM 中使用双端链表来存放指令序列——甚至是基本块序列.
+    不过，双端链表的访问效率不如数组，这一点在 JIT 编译器中变成了减分项，例如 WebKit B3 JIT compiler 就将后端模块中原来的 LLVM IR 换成了新的 B3 IR，B3 IR 就使用数组存储，为了满足在 B3 IR 层级上进行代码优化的需要，编译器引入了一个 `InsertionSet` 数据结构.
+    它记录优化 Pass 中所有的变化，并在最后进行统一插入更新，以提高效率.
+    如果你对此感兴趣，可以阅读 [WebKit Blog](https://webkit.org/blog/5852/introducing-the-b3-jit-compiler/)
 
 ### 语句生成
 
@@ -477,9 +519,9 @@ void insert_instruction(Instruction *inst, BasicBlock *block) {
 translate_stmt(stmt, symbol_table, basic_block) -> exit_basic_block
 ```
 
-由于语句块可能包含控制流的跳转，但是整个语句块并没有产生值，所以 `translate_stmt` 将返回一个基本块，表示 `stmt` 结束后，控制流将在哪个基本块继续。
+由于语句块可能包含控制流的跳转，而且整个语句块整体并没有产生 Value，所以我们考虑 `translate_stmt` 返回一个基本块，表示 `stmt` 结束后，控制流将在哪个基本块继续。
 
-条件语句的生成则要复杂些，我们所定义的基本块中间在这里将发挥重要作用.
+条件语句的生成则要复杂些，我们所定义的基本块结构中间在这里将发挥重要作用.
 直觉上来说，If 语句应该生成如下的中间代码：
 ```c
 if (exp) {
