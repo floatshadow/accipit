@@ -25,8 +25,8 @@
 
 ## 中间代码的定义
 
-本实验的 IR 是类似 LLVM IR 的 partial SSA 形式，具体的规范请参阅 [Accipit IR 规范](appendix/accipit-spec.md).
-我们在附录还停供了一些样例：[SysY 结构与 Accipit IR 的对应](appendix/sysy-accipit-mapping.md)，为你演示如何从 SysY 前端的高层级结构是如何翻译到 Accipit IR 的。
+本实验的 IR 是类似 LLVM IR 的 partial SSA 形式，具体的规范请参阅[Accipit IR 规范](accipit-spec.md).
+我们在附录还停供了一些样例：[SysY 结构与 Accipit IR 的对应](sysy-accipit-mapping.md)，为你演示如何从 SysY 前端的高层级结构是如何翻译到 Accipit IR 的。
 
 下面这段阶乘的样例代码能帮助你实现一个功能正确（虽然显然欠优化的）的中端代码.
 
@@ -128,253 +128,257 @@ $ dot -Tpng -o test.png .test.dot
 
 下一步我们就要把经过语义检查和推断的语法树转换成中间代码.
 基本思路是遍历语法树的节点，然后根据节点的类型生成对应的中间代码.
-其核心和语义分析类似，我们要实现一个 translate_X 函数，X 对应表达式，语句等等。
+其核心和语义分析类似，我们要实现一个 translate_X 函数，X 对应表达式，语句等等.
 
 ### 表达式生成
 
-正如前面所述，每条指令实际上定义了一个新的变量，因此可以使用指令本身来表示变量，在 Accipit IR 中，值 (value) 包括变量和常数，因此我们先定义 `Value` 类型,：
+正如前面所述，每条指令实际上定义了一个新的变量，因此可以使用指令本身来表示变量，在 Accipit IR 中，值 (value) 包括变量和常数，因此我们先定义 `Value` 类型：
 
-=== "C"
-    C 通常使用 enum + union：
+!!! tip "附：实现建议"
+    === "C"
+        C 通常使用 enum + union：
 
-    ```c
-    enum value_kind {
-        kind_constant_int32,
-        Kind_constant_unit,
-        // ...
-        kind_binary_expression,
-        kind_function_call,
-        kind_load,
-        kind_store,
-        // ...
-    };
-
-    struct value {
-        enum value_kind kind,
-        struct type *ty;
-        union {
-            struct { int number; } constant_int32;
-            struct { enum binary_op op, struct value *lhs, *rhs; } binary_expr;
-            struct { struct function *callee, struct vector args } function_call;
-            struct { struct value* src_addr } load;
-            struct { struct value* dest_addr, struct value *value_to_be_stored } store;
-        };
-    };
-    ```
-
-    使用一个枚举类型 enum 来标记 Value 的类型，union 来存储不同 Value 的 field，这种方式我们一般称为 "tagged union"。
-    因此，在遍历 Value 时，需要根据 Value 的类型来做不同的操作：
-
-    ```c
-    void handle_value(struct value *val) {
-        switch (val->kind) {
-            case kind_constant_int32:
-                handle_constant_int32(val);
-                break;
-            case kind_constant_unit:
-                handle_constant_unit(val);
-                break;
-            case kind_binary_expression:
-                handle_binary_expression(val);
-                break;
+        ```c
+        enum value_kind {
+            kind_constant_int32,
+            Kind_constant_unit,
             // ...
-            case kind_store:
-                handle_store_expression(val);
-                break;
-            default:
-                raise_error_and_dump();
-        }
-    }
-    ```
+            kind_binary_expression,
+            kind_function_call,
+            kind_load,
+            kind_store,
+            // ...
+        };
 
-=== "C++"
-    C++ 可以使用 `std::variant` 来代替 C 的 enum + union 来实现 “类型安全” 的 tagged union，具体可以看 [cpp reference](https://en.cppreference.com/w/cpp/utility/variant)。
-    简单来说，当一个 Value 实际上是 `kind_constant_int32` 类型，但是你错误地使用了处理 `kind_binary_expression` 的函数处理它，就会错误地把这个 Value 的 field 当作 `kind_binary_expression` 来处理，于是可能会得出错误的结果，但是不论是编译时还是运行时都不会对此产生任何的报错。
-    `std::variant` 会在上述情况发生时扔出异常，方便你 debug。
-
-    此外 C++ 可以使用面对对象实现：
-
-    ```cpp
-    class Value {
-        Type *ty;
-        /*...*/ 
-    };
-
-    class ConstantInt : public Value {
-        int number;
-        /*...*/ 
-    };
-
-    class BinaryExpr: public Value {
-        Value *lhs, *rhs;
-        /*...*/
-    };
-
-    class FnCall: public Value {
-        Function *callee;
-        std::vector<Value *> args;
-    };
-    ```
-
-    在这种实现模式下，在遍历 Value 时如何判断当前 Value 是哪种类型，以便我们用正确的函数处理不同类型的 Value 呢？
-    有三大类方法：
-
-    * 使用虚函数（不推荐）
-
-        例如，我一个打印 IR 的函数叫做 `print_value`，给 Value 声明一个虚成员函数 `virtual void print_value()`，然后每个 Value 的子类继承时重载这个函数，这样我们就可以对所有 Value 类型的变量直接调用 `value->print_value()` 即可。
-        但是缺点是，你永远不可能知道你到底需要多少这样的处理 Value 的函数，新增一个 `Value::foo()`，你就要回过头去修改所有 Value 以及子类的声明；再新增一个 `Value::bar()`，你还要重复上面的事情。
-        这样很麻烦，而且也不优雅。
-
-    * 使用 RTTI（可行，~~自己看着用.jpg~~）
-
-        C++ 标准有一个特性 “运行时类型识别” (Runtime Type Identification, RTTI)。
-        使用运算符 `typeid` 会返回一个运行时的、对用户不透明的 `std::type_info` 类型，[cpp reference](https://en.cppreference.com/w/cpp/types/type_info)。
-        你可以获取 `type_info` 的内部名字以及通过 `==` 比较两个 `type_info` 是否相等，这里我们为大家编写了一个[godbolt 在线样例](https://godbolt.org/z/o4W7To3Ya)。
-    
-    * 使用模板黑魔法（推荐，写起来优雅，~~不得不品尝的环节出现了，大雾~~）
-
-        ~~下面这个方法真的不是很好笑~~，这个方法不需要 C++ 的 RTTI，而且运行足够快，但是需要用到用到 C++ 11 的 `type_traits`标准库和一点点模板魔法，可能比较难理解：
-
-        首先，常见的做法是新建一个 `common.def`，然后定义宏：
-
-        ```cpp title="common.def"
-        #ifndef ValueKindDefine
-        #define ValuKindDefine(x)
-        #endif
-
-        ValueKindDefine(SV_ConstantInt)
-        ValueKindDefine(SV_ConstantUnit)
-        ValueKindDefine(SV_BinaryExpr)
-        ValueKindDefine(SV_Alloca)
-        // ....
-        ValueKindDefine(SV_Store)
-        ValueKindDefine(SV_Load)
-
-        // Gaurd
-        #undef ValueKindDefine
-        ```
-
-        这个宏的作用是利用 include 的原理是直接文本插入来让编译器帮你完成 enum 的填写：
-
-        ```cpp title="Value.h"
-        #define ValueTypeDefine(x) x,
-        enum ValueKind {
-        #include "Common/Common.def"
+        struct value {
+            enum value_kind kind,
+            struct type *ty;
+            union {
+                struct { int number; } constant_int32;
+                struct { enum binary_op op, struct value *lhs, *rhs; } binary_expr;
+                struct { struct function *callee, struct vector args } function_call;
+                struct { struct value* src_addr } load;
+                struct { struct value* dest_addr, struct value *value_to_be_stored } store;
+            };
         };
         ```
 
-        这样我们就完成了类似 C 中 value_kind 的 enum 定义，然后在基类 Value 中保存一个 `value_kind` 的字段，这个字段标识了 Value 具体是哪个类型，你还可以利用 C++ 11 的初始化静态成员语法来给所有 Value 的子类初始化 `value_kind` 字段：
+        使用一个枚举类型 enum 来标记 Value 的类型，union 来存储不同 Value 的 field，这种方式我们一般称为 "tagged union".
+        因此，在遍历 Value 时，需要根据 Value 的类型来做不同的操作：
 
-        ```cpp title="Value.h"
+        ```c
+        void handle_value(struct value *val) {
+            switch (val->kind) {
+                case kind_constant_int32:
+                    handle_constant_int32(val);
+                    break;
+                case kind_constant_unit:
+                    handle_constant_unit(val);
+                    break;
+                case kind_binary_expression:
+                    handle_binary_expression(val);
+                    break;
+                // ...
+                case kind_store:
+                    handle_store_expression(val);
+                    break;
+                default:
+                    raise_error_and_dump();
+            }
+        }
+        ```
+
+    === "C++"
+        C++ 可以使用 `std::variant` 来代替 C 的 enum + union 来实现 “类型安全” 的 tagged union，具体可以看 [cpp reference](https://en.cppreference.com/w/cpp/utility/variant)。
+        简单来说，当一个 Value 实际上是 `kind_constant_int32` 类型，但是你错误地使用了处理 `kind_binary_expression` 的函数处理它，就会错误地把这个 Value 的 field 当作 `kind_binary_expression` 来处理，于是可能会得出错误的结果，但是不论是编译时还是运行时都不会对此产生任何的报错。
+        `std::variant` 会在上述情况发生时扔出异常，方便你 debug。
+
+        此外 C++ 可以使用面对对象实现：
+
+        ```cpp
         class Value {
-        protected:
-            /*...*/
-            ValueKind value_kind;
-        public:
-            Value(ValueKind kind): value_kind(kind) {/* ... */}
+            Type *ty;
+            /*...*/ 
         };
 
         class ConstantInt : public Value {
-            constexpr static ValueKind this_kind = SV_ConstantInt;
-            ConstantInt(): Value(value_kind) { /* ... */ }
             int number;
             /*...*/ 
         };
 
         class BinaryExpr: public Value {
-            constexpr static ValueKind this_kind = SV_BinaryExpr;
-            BinaryExpr(): Value(this_kind) { /* ... */ }
             Value *lhs, *rhs;
             /*...*/
         };
-        ```
 
-        ~~到这一步你回头还来得及~~，其实以上这些代码已经足够让你像 C 一样通过 `value_kind` 这个标记来区分不同的 Value 了：每个 Value 的子类的构造函数都会将自己这个类的标记 `this_kind` 赋给基类的 `value_kind`。
-        但是，模板魔法能让他们更进一步，接下来是两个最最重要的模板：
-
-        ```cpp title="Value.h"
-        class Value {
-        // ...
-        public:
-            template <typename T>
-            bool is() {
-                return value_type == std::remove_pointer_t<T>::this_kind;
-            }
-            template <typename T> T as() {
-                if (is<T>()) {
-                    return static_cast<T>(this);
-                } else {
-                    return nullptr;
-                }
-            }
+        class FnCall: public Value {
+            Function *callee;
+            std::vector<Value *> args;
         };
+        ```
 
-        Value *constant_int = new ConstantInt;
-        // variable `constant_int` is NOT `BinaryExpr` type
-        assert(!constant_int->is<BinaryExpr>())
-        // variable `constant_int` is `ConstantInt` type
-        assert(constant_int->is<ConstantInt>())
+        在这种实现模式下，在遍历 Value 时如何判断当前 Value 是哪种类型，以便我们用正确的函数处理不同类型的 Value 呢？
+        有三大类方法：
 
-        if (ConstantInt *inner = constant_int->as<ConstantInt *>()) {
-            assert(true, "Yes, `constant_int` is ConstantInt, \
-                          so the branch is reachable");
-        }
+        * 使用虚函数（不推荐）
+
+            例如，我一个打印 IR 的函数叫做 `print_value`，给 Value 声明一个虚成员函数 `virtual void print_value()`，然后每个 Value 的子类继承时重载这个函数，这样我们就可以对所有 Value 类型的变量直接调用 `value->print_value()` 即可.
+            但是缺点是，你永远不可能知道你到底需要多少这样的处理 Value 的函数，新增一个 `Value::foo()`，你就要回过头去修改所有 Value 以及子类的声明；再新增一个 `Value::bar()`，你还要重复上面的事情.
+            这样很麻烦，而且也不优雅.
+            总得来说，只适合 print 这样比较确定和固定的操作.
+
+        * 使用 RTTI（可行，~~自己看着用.jpg~~）
+
+            C++ 标准有一个特性 “运行时类型识别” (Runtime Type Identification, RTTI).
+            使用运算符 `typeid` 会返回一个运行时的、对用户不透明的 `std::type_info` 类型，具体可参考 [cpp reference](https://en.cppreference.com/w/cpp/types/type_info).
+            你可以获取 `type_info` 的内部名字以及通过 `==` 比较两个 `type_info` 是否相等，这里我们为大家编写了一个 [godbolt 在线样例](https://godbolt.org/z/o4W7To3Ya).
         
-        if (BinaryExpr *inner = constant_int->as<BinaryExpr *>()) {
-            assert(false, "No, `constant_int` is NOT BinaryExpr, \
-                           so this branch is unreachable");
-        }
+        * 使用模板黑魔法（推荐，写起来优雅，~~不得不品尝的环节出现了，大雾~~）
+
+            ~~下面这个方法真的不是很好笑~~，这个方法不需要 C++ 的 RTTI，而且运行足够快，但是需要用到用到 C++ 11 的 `type_traits`标准库和一点点模板魔法，可能比较难理解：
+
+            首先，常见的做法是新建一个 `common.def`，然后定义宏：
+
+            ```cpp title="common.def"
+            #ifndef ValueKindDefine
+            #define ValuKindDefine(x)
+            #endif
+
+            ValueKindDefine(SV_ConstantInt)
+            ValueKindDefine(SV_ConstantUnit)
+            ValueKindDefine(SV_BinaryExpr)
+            ValueKindDefine(SV_Alloca)
+            // ....
+            ValueKindDefine(SV_Store)
+            ValueKindDefine(SV_Load)
+
+            // Gaurd
+            #undef ValueKindDefine
+            ```
+
+            这个宏的作用是利用 include 的原理是直接文本插入来让编译器帮你完成 enum 的填写：
+
+            ```cpp title="Value.h"
+            #define ValueTypeDefine(x) x,
+            enum ValueKind {
+            #include "Common/Common.def"
+            };
+            ```
+
+            这样我们就完成了类似 C 中 value_kind 的 enum 定义，然后在基类 Value 中保存一个 `value_kind` 的字段，这个字段标识了 Value 具体是哪个类型，你还可以利用 C++ 11 的初始化静态成员语法来给所有 Value 的子类初始化 `value_kind` 字段：
+
+            ```cpp title="Value.h"
+            class Value {
+            protected:
+                /*...*/
+                ValueKind value_kind;
+            public:
+                Value(ValueKind kind): value_kind(kind) {/* ... */}
+            };
+
+            class ConstantInt : public Value {
+                constexpr static ValueKind this_kind = SV_ConstantInt;
+                ConstantInt(): Value(value_kind) { /* ... */ }
+                int number;
+                /*...*/ 
+            };
+
+            class BinaryExpr: public Value {
+                constexpr static ValueKind this_kind = SV_BinaryExpr;
+                BinaryExpr(): Value(this_kind) { /* ... */ }
+                Value *lhs, *rhs;
+                /*...*/
+            };
+            ```
+
+            ~~到这一步你回头还来得及~~，其实以上这些代码已经足够让你像 C 一样通过 `value_kind` 这个标记来区分不同的 Value 了：每个 Value 的子类的构造函数都会将自己这个类的标记 `this_kind` 赋给基类的 `value_kind`.
+            但是，模板魔法能让他们更进一步，接下来是两个最最重要的模板：
+
+            ```cpp title="Value.h"
+            class Value {
+            // ...
+            public:
+                template <typename T>
+                bool is() {
+                    return value_type == std::remove_pointer_t<T>::this_kind;
+                }
+                template <typename T> T as() {
+                    if (is<T>()) {
+                        return static_cast<T>(this);
+                    } else {
+                        return nullptr;
+                    }
+                }
+            };
+
+            Value *constant_int = new ConstantInt;
+            // variable `constant_int` is NOT `BinaryExpr` type
+            assert(!constant_int->is<BinaryExpr>())
+            // variable `constant_int` is `ConstantInt` type
+            assert(constant_int->is<ConstantInt>())
+
+            if (ConstantInt *inner = constant_int->as<ConstantInt *>()) {
+                assert(true, "Yes, `constant_int` is ConstantInt, \
+                            so the branch is reachable");
+            }
+            
+            if (BinaryExpr *inner = constant_int->as<BinaryExpr *>()) {
+                assert(false, "No, `constant_int` is NOT BinaryExpr, \
+                            so this branch is unreachable");
+            }
+            ```
+
+            首先，对于 `is` 模板，`constant_int->is<BinaryExpr>()` 实际上在做：
+
+            ```cpp
+            constant_int->value_kind == BinaryExpr::this_kind;
+            ```
+
+            由于 `constant_int` 的 value_kind 是 `SV_ConstantInt` 因此返回 false.
+
+            同理，对于 `as` 模板，`if (ConstantInt *inner = constant_int->as<ConstantInt *>()) { ... }` 实际上做的是：
+
+            ```cpp
+            // `std::remove_pointer_t<ConstantInt *>` gets `ConstantInt`
+            if (constant_int->value_kind == ConstantInt::this_kind) {
+                // safe cast
+                return (ConstantInt *)(this);
+            } else {
+                // else return nullptr as failure
+                return nullptr;
+            }
+            ```
+
+            也就是说，如果 `is` 检查通过了，就能安全地 cast 到对应的子类型，否则返回 nullptr.
+            返回 nullptr 很大程度上方便了上面这种在 if 的条件里面定义变量的语法，如果是正确的类型，就会进入 if 的真分支；否则返回 nullptr 就不会进入 if 真分支.
+
+            **注意**: `std::remove_pointer_t` 是必须的，因为我们通常会和 `Value *` 类型打交道，而不是 `Value` 本身.
+            你会发现 `is` 使用的模板参数是 Value 的子类型本身，而 `as` 通常用的是 Value 子类型的指针.
+
+
+    === "OCaml"
+        ML 系语言以及 Rust 都支持代数数据类型 (Algebraic Data Type)，可以很方便地定义：
+
+        ```ocaml
+        type ValueKinds = ConstantInt of int
+            | ConstantUnit
+            | BinaryExpr of BinOp * Value * Value
+            | FunctionCall of Function * Value list
+            | Load of Value
+            | Store of Value * Value
+        and
+        type Value = Type * ValueKinds
         ```
 
-        首先，对于 `is` 模板，`constant_int->is<BinaryExpr>()` 实际上在做：
+        都直接 ADT 了，pattern match 吧...
 
-        ```cpp
-        constant_int->value_kind == BinaryExpr::this_kind;
-        ```
-
-        由于 `constant_int` 的 value_kind 是 `SV_ConstantInt` 因此返回 false。
-
-        同理，对于 `as` 模板，`if (ConstantInt *inner = constant_int->as<ConstantInt *>()) { ... }` 实际上做的是：
-
-        ```cpp
-        if (constant_int->value_kind == ConstantInt::this_kind) {
-            // safe cast
-            return (ConstantInt *)(this);
-        } else {
-            // else return nullptr as failure
-            return nullptr;
-        }
-        ```
-
-        也就是说，如果 `is` 检查通过了，就能安全地 cast 到对应的子类型，否则返回 nullptr。
-        返回 nullptr 很大程度上方便了上面这种在 if 的条件里面定义变量的语法，如果是正确的类型，就会进入 if 的真分支；否则返回 nullptr 就不会进入 if 真分支。
-
-        **注意**: `std::remove_pointer_t` 是必须的，因为我们通常会和 `Value *` 类型打交道，而不是 `Value` 本身。
-
-
-=== "OCaml"
-    ML 系语言以及 Rust 都支持代数数据类型 (Algebraic Data Type)，可以很方便地定义：
-
-    ```ocaml
-    type ValueKinds = ConstantInt of int
-        | ConstantUnit
-        | BinaryExpr of BinOp * Value * Value
-        | FunctionCall of Function * Value list
-        | Load of Value
-        | Store of Value * Value
-    and
-    type Value = Type * ValueKinds
-    ```
-
-    都直接 ADT 了，pattern match 吧。。。
-
-因此 `translate_expr` 函数定义为：
+然后我们定义 `translate_expr` 函数：
 
 ```plaintext
 translate_expr(expr, symbol_table, basic_block) -> value
 ```
 
-也就是说，`translate_expr` 将表达式翻译到中端 IR 的 value.
+`translate_expr` 将表达式翻译到中端 IR 的 value.
 其中 `symbol_table` 是符号表，通常维护一个 `string -> value` 的映射，虽然上文提到，在类似 SSA 的形式下，变量的名字并不重要，但是在处理局部变量时我们为每个局部变量分配一个栈上的位置，需要记录变量名字到对应 alloca 指令的映射.
 重复命名的变量，如在一个语句块里定义的变量和外层的变量重名时，你需要自行处理.
 
@@ -458,6 +462,12 @@ void insert_instruction(Instruction *inst, BasicBlock *block) {
     instrs.push_bakc(inst);
 }
 ```
+
+??? tip "数据结构对 IR 的影响"
+    使用类似数组的数据结构存放指令，有利于提高 cache 的命中率，使得遍历指令会很快.
+    但是同时，如果你同时考虑进行中端的目标无关代码优化，那么你就会需要频繁地删除某些指令、在中间插入某些指令，或者将几条指令替换成更高效的指令，在这种情况下使用双端链表存放指令能够非常方便地实现上面这些操作.
+    当然也有例外，由于双端链表访问指令不如数组快，因此在 JIT 编译器中可能变成了减分项，WebKit B3 JIT compiler 就将后端原来的 LLVM IR 换成了新的 B3 IR，B3 IR 使用数组存储，因此上面的优化引入了一个额外的 `InsertionSet` 的数据结构，记录优化 Pass 中所有的变化并在最后进行统一插入更新.
+    如果你感兴趣，可以看 [WebKit Blog](https://webkit.org/blog/5852/introducing-the-b3-jit-compiler/)
 
 ### 语句生成
 
