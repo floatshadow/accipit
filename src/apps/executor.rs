@@ -1,6 +1,5 @@
-use std::fmt::Pointer;
-use std::{char, fmt};
-use std::collections::HashMap;
+use std::fmt;
+use std::char;
 use std::str::FromStr;
 
 use crate::ir::{
@@ -8,9 +7,9 @@ use crate::ir::{
     structures::*
 };
 
-use nom::character;
 use slotmap::{SlotMap, SecondaryMap};
 use scanf::scanf;
+use colored::Colorize;
 
 #[derive(Debug)]
 pub enum ExecutionError {
@@ -27,6 +26,36 @@ pub enum ExecutionError {
     InternalError(String),
     LexerError,
     ParseError
+}
+
+impl fmt::Display for ExecutionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", "error: ".red().bold())?;
+        match self {
+            Self::SymbolNotFound(s) =>
+                write!(f, "'{}' symbol not found", s.bold()),
+            Self::TypeMismatch(value, val) =>
+                write!(f, "the type of value '{}' is incompatiable with input '{}'",
+                        value.to_string().bold(), val.to_string().bold()),
+            Self::InvalidInputArguments(s) =>
+                write!(f, "invalid input argument '{}'", s.bold()),
+            Self::OffsetInvalidIndex(offset, index, bound) => {
+                match bound {
+                    Some(bound) =>
+                        write!(f, "in offset '{}', index ['{}' < '{}'] is invalid",
+                                offset.to_string().bold(), index.to_string().bold(), bound.to_string().bold()),
+                    None =>
+                        write!(f, "in offset '{}', index ['{}' < '{}'] is invalid",
+                                offset.to_string().bold(), index.to_string().bold(), "none".bold()),
+                }
+            },
+            Self::OffsetExceedMemoryRegion(offset) =>
+                write!(f, "offset '{}' exceeded memory bound", offset.to_string().bold()),
+            Self::LexerError => write!(f, "lexing error"),
+            Self::ParseError => write!(f, "parsing error"),
+            _ => unreachable!()
+        }
+    }
 }
 
 /// Trace the source of pointer values,
