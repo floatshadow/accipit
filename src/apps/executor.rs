@@ -1,11 +1,13 @@
 use std::fmt;
 use std::char;
 use std::str::FromStr;
+use itertools::Itertools;
 
 use crate::ir::{
     values,
     structures::*
 };
+use crate::utils::display_helper::*;
 
 use slotmap::{SlotMap, SecondaryMap};
 use scanf::scanf;
@@ -24,6 +26,8 @@ pub enum ExecutionError {
     UseUndefinedValue,
     InvalidInputArguments(String),
     InternalError(String),
+    FunctionNumArgumentMismatch(String, Vec<Val>),
+    ReturnDanglingPointer(Value),
     LexerError,
     ParseError
 }
@@ -51,6 +55,15 @@ impl fmt::Display for ExecutionError {
             },
             Self::OffsetExceedMemoryRegion(offset) =>
                 write!(f, "offset '{}' exceeded memory bound", offset.to_string().bold()),
+            Self::InternalError(s) =>
+                write!(f, "internal function error {}", s),
+            Self::FunctionNumArgumentMismatch(name, param) => {
+                writeln!(f, "function '{}' get inconsistent number of arguments with its parameter list", name.bold())?;
+                write!(f, "    input params '[{}]'", param.iter().format_with(", ", | elem, f | f(&format_args!("{}", elem.to_string().bold()))))
+            },
+            Self::ReturnDanglingPointer(value) => {
+                write!(f, "try to returns a dangling pointer '{}'", value.to_string().bold())
+            },
             Self::LexerError => write!(f, "lexing error"),
             Self::ParseError => write!(f, "parsing error"),
             _ => unreachable!()
@@ -62,6 +75,7 @@ impl fmt::Display for ExecutionError {
 /// including function parameters, local allocas.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemoryObject {
+    pub frame_index: usize,
     /// Function scope of the object.
     pub function: String,
     /// Base address value of the object.
@@ -89,6 +103,7 @@ impl MemoryObject {
         let total_offset = base.offset_within + offset;
         if total_offset < base.size {
             Some(MemoryObject {
+                frame_index: base.frame_index,
                 function: base.function.clone(),
                 base: base.base,
                 offset_within: total_offset,
@@ -116,7 +131,7 @@ impl FromStr for Val {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let int_value = s.parse::<i32>()
-            .map_err(| _ | ExecutionError::InvalidInputArguments(String::from(s)))?;
+            .map_err(| _ | ExecutionError::InvalidInputArguments(format!("{}", s.bold())))?;
 
         Ok(Val::Integer(int_value))
     }
@@ -129,6 +144,23 @@ impl fmt::Display for Val {
             Val::Integer(inner) => write!(f, "{}", inner),
             Val::Bool(inner) => write!(f, "{}", inner),
             Val::Pointer(inner) => write!(f, "<inner pointer>: {:?}", inner),
+            Val::Function(name) => write!(f, "function: {}", name),
+            Val::Undefined => write!(f, "<undefined>")
+        }
+    }
+}
+
+impl<'a> fmt::Display for DisplayWithContext<'a, Val, Module> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.item;
+        let module = self.context;
+        match val {
+            Val::Unit => write!(f, "()"),
+            Val::Integer(inner) => write!(f, "{}", inner),
+            Val::Bool(inner) => write!(f, "{}", inner),
+            Val::Pointer(inner) =>
+                write!(f, "<inner pointer>: [stack_depth: {}, function: {}, base_value: {}, offset: {}, region_size: {}]",
+                        inner.frame_index, inner.function, module.get_value(inner.base), inner.offset_within, inner.size),
             Val::Function(name) => write!(f, "function: {}", name),
             Val::Undefined => write!(f, "<undefined>")
         }
@@ -479,87 +511,88 @@ pub fn single_step(
             match inner.callee.as_str() {
                 "getint" => {
                     let mut value: i32 = 0;
-                    scanf!("{i32}", value).expect("expect a `int` input");
+                    scanf!("{i32}", value).expect("'getint' expect a 'int' input");
                     Ok(Val::Integer(value))
                 },
                 "getch" => {
                     let mut character: char = 0 as char;
-                    scanf!("{char}", character).expect("expect a `char` input");
+                    scanf!("{char}", character).expect("'getch' expect a 'char' input");
                     Ok(Val::Integer(character as i32))
                 },
                 "getarray" => {
-                    assert!(args_val.len() == 1, "`getarray` expect 1 argument");
+                    assert!(args_val.len() == 1, "'{}' expect 1 argument", "getarray".bold());
                     let addr = args_val[0].clone();
                     match addr {
                         Val::Pointer(inner) => {
                             let mut n: i32 = 0;
-                            scanf!("{i32}", n).expect("expect a `int` input as array size");
+                            scanf!("{i32}", n).expect("'getarray' expect a 'int' input as array size");
                             let buffer = env.get_memory_mut(inner.base);
-                            assert!(n >= 0, "expect a non-negative array size");
+                            assert!(n >= 0, "'{}' expect a non-negative array size", "getarray".bold());
                             for i in 0..n {
                                 let mut val: i32 = 0;
-                                scanf!("{i32}", val).expect("expect a `int` input as array element");
+                                scanf!("{i32}", val).expect("expect a 'int' input as array element");
                                 assert!(inner.offset_within + (i as usize) < inner.size,
-                                        "`getarray` access memory out of bounds"
+                                        "'{}' access memory out of bounds", "getarray".bold()
                                 );
                                 buffer[inner.offset_within + i as usize] = Val::Integer(val);
                             }
                             Ok(Val::Integer(n))
                         },
-                        _ => Err(ExecutionError::InternalError(String::from("`getarray` accepts 1 pointer type argument only")))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 pointer type argument only", "getarray".bold())))
                     }
                 },
                 "putint" => {
-                    assert!(args_val.len() == 1, "`putint` expect 1 argument");
+                    assert!(args_val.len() == 1, "'{}' expect 1 argument", "putint".bold());
                     let output_value = args_val[0].clone();
                     match output_value {
                         Val::Integer(inner) => {
                             print!("{}", inner);
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(String::from("`putint` accepts 1 integer type argument only")))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only", "putint".bold())))
                     }
                 },
                 "putch" => {
-                    assert!(args_val.len() == 1, "`putch` expect 1 argument");
+                    assert!(args_val.len() == 1, "'{}' expect 1 argument", "putch".bold());
                     let output_value = args_val[0].clone();
                     match output_value {
                         Val::Integer(inner) => {
-                            print!("{}", char::from_u32(inner as u32).expect("ilegal char value in `putch`"));
+                            print!("{}", char::from_u32(inner as u32).expect("ilegal char value in 'putch'"));
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(String::from("`putch` accepts 1 integer type argument only")))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only","putch".bold())))
                     }
                 },
                 "putarray" => {
-                    assert!(args_val.len() == 2, "`putarray` expect 2 argument");
+                    assert!(args_val.len() == 2, "'{}' expect 2 argument", "putarray".bold());
                     let num = match &args_val[1] {
                         Val::Integer(inner) => Ok(inner.clone()),
-                        _ => Err(ExecutionError::InternalError(String::from("`putarray` expect integer type argument as array size")))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' expect integer type argument as array size", "putarray".bold())))
                     }?;
                     print!("{}:", num);
                     let addr = args_val[1].clone();
                     match addr {
                         Val::Pointer(inner) => {
                             let buffer = env.get_memory(inner.base);
-                            assert!(num >= 0, "expect a non-negative array size");
+                            assert!(num >= 0, "'{}', expect a non-negative array size", "putarray".bold());
                             for i in 0..num {
                                 assert!(inner.offset_within + (i as usize) < inner.size,
-                                        "`putarray` access memory out of bounds"
+                                        "'{}' access memory out of bounds", "putarray".bold()
                                 );
                                 let load_val =  buffer[inner.offset_within + i as usize].clone();
                                 match load_val {
                                     Val::Integer(inner) => print!(" {}", inner),
-                                    _ => panic!("`putarray` accept a non integer array")
+                                    _ => panic!("'{}' accept a non integer array", "putarray".bold())
                                 }
                             }
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(String::from("`getarray` accepts 1 pointer type argument only")))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 pointer type argument only", "getarray".bold())))
                     }
                 },
                 "starttime" | "stoptime" => {
-                    print!("Warning: `starttime` and `stoptime` do nothing in interpreter");
+                    print!("{} '{}' and '{}' do nothing in interpreter",
+                            "Warning: ".yellow(), "starttime".bold(), "stoptime".bold());
                     Ok(Val::Unit)
                 },
                 _ => {
@@ -575,6 +608,7 @@ pub fn single_step(
         ValueKind::Alloca(inner) => {
             let function = env.get_top_function(module);
             let memory_object = MemoryObject {
+                frame_index: env.frames.len(),
                 function: function.name.clone(),
                 base: value,
                 offset_within: 0,
@@ -638,7 +672,15 @@ pub fn single_step_terminator(
         Terminator::Return(inner) => {
             env.position = None;
             let ret_val = env.get_val(inner.value);
-            Ok(ret_val.clone())
+            // check dangling pointer
+            match &ret_val {
+                Val::Pointer(mem) if mem.frame_index > env.frames.len() => {
+                    Err(ExecutionError::ReturnDanglingPointer(
+                        module.get_value(inner.value).clone())
+                    )
+                }
+                _ => Ok(ret_val.clone())
+            }
         },
         Terminator::Panic => {
             Err(ExecutionError::StuckInPanic)
@@ -666,8 +708,11 @@ pub fn run_on_function(
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
     env.frames.push(Frame::new(function));
-    let function = module.func_ctx.get(function).unwrap();
+    let function = module.get_function(function);
     // set args values
+    if function.args.len() != args.len() {
+        return Err(ExecutionError::FunctionNumArgumentMismatch(function.name.clone(), args));
+    }
     let params: Vec<Val> = args
         .into_iter().zip(function.args.iter().cloned())
         .map( | (arg, param) | {
@@ -685,7 +730,8 @@ pub fn run_on_function(
     let mut bb_exit_val = Val::Undefined;
 
     while let Some(current_bb) = env.position {
-        let block = function.blocks_ctx.get(current_bb).unwrap();
+        env.position = Some(current_bb);
+        let block = function.get_basic_block(current_bb);
         bb_exit_val = run_on_basicblock(env, module, block)?;
     };
     env.frames.pop();

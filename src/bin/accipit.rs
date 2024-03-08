@@ -31,7 +31,7 @@ pub struct Args {
     file: PathBuf,
 
     /// Specify the argument passes to the entry function
-    #[clap(value_parser=clap::value_parser!(String))]
+    #[clap(value_parser=clap::value_parser!(String), allow_hyphen_values(true))]
     args: Vec<String>,
 
     /// Specify the output file (unused option)

@@ -1,4 +1,5 @@
 use crate::ir::structures::*;
+use crate::apps::executor::Val;
 
 pub struct DisplayWithContext<'a, NotDisplayable, Context> {
     pub item: &'a NotDisplayable,
@@ -14,3 +15,5 @@ pub trait FromNotDisplayable<'a, T, C>: Sized {
 impl<'a> FromNotDisplayable<'a, Value, Module> for Value {}
 impl<'a> FromNotDisplayable<'a, BasicBlock, Module> for BasicBlock {}
 impl<'a> FromNotDisplayable<'a, Function, Module> for Function {}
+
+impl <'a> FromNotDisplayable<'a, Val, Module> for Val {}
