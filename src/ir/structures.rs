@@ -1,13 +1,12 @@
 use std::fmt;
-use std::error::Error;
 use std::collections::HashMap;
 
-use slotmap::{basic, new_key_type, SlotMap};
+use slotmap::{new_key_type, SlotMap};
 use itertools::Itertools;
 
 use super::values;
 use super::types::{Type, TypeKind};
-
+use crate::utils::display_helper::*;
 
 new_key_type! {
     pub struct ValueRef;
@@ -227,6 +226,59 @@ impl Module {
 }
 
 
+impl<'a> fmt::Display for DisplayWithContext<'a, Value, Module> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = self.item;
+        let module = self.context;
+        match &value.kind {
+            ValueKind::Alloca(inner) => {
+                write!(f, "  let {} = alloca {}, {}\n",
+                    value, inner.elem_type, inner.num_elements)
+            },
+            ValueKind::Binary(inner) => {
+                let lhs = module.get_value(inner.lhs);
+                let rhs = module.get_value(inner.rhs);
+                write!(f, "  let {} = {} {}, {}\n",
+                        value, inner.op, lhs, rhs)
+            },
+            ValueKind::Load(inner) => {
+                let addr = module.get_value(inner.addr);
+                write!(f, "  let {} = load {}\n",
+                        value, addr)
+            },
+            ValueKind::Store(inner) => {
+                let stored = module.get_value(inner.value);
+                let addr = module.get_value(inner.addr);
+                write!(f, "  let {} = store {}, {}\n",
+                        value, stored, addr)
+            },
+            ValueKind::FnCall(inner) => {
+                let callee = inner.callee.clone();
+                let args = inner.args.iter().cloned().map(| argref| module.get_value(argref));
+                write!(f, "  let {} = call {}, {}\n",
+                        value, callee, args.format(", "))
+            },
+            ValueKind::Offset(inner) => {
+                let elem_type = inner.elem_type.clone();
+                let addr = module.get_value(inner.base_addr);
+                let indices = inner.index.iter().cloned().map(| argref| module.get_value(argref));
+                let bounds = inner.bounds.clone();
+                write!(f, "  let {} = offset {}, {}, {}\n",
+                        value, elem_type, addr,
+                        indices.into_iter().zip(bounds.into_iter())
+                        .format_with(", ", | (index, bound), f | {
+                            match bound {
+                                Some(bound) => f(&format_args!("[{} < {}]", index, bound)),
+                                None => f(&format_args!("[{} < none]", index))
+                            }
+                        })
+                    )
+            }
+            _ => panic!("invalid instruction {}", value)
+        }
+    }
+}
+
 
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -258,52 +310,7 @@ impl fmt::Display for Module {
                         .unwrap_or(String::from("%<unknown_label>")))?;
                     for value_ref in basic_block.instrs.iter() {
                         let value = self.get_value(value_ref.clone());
-                        match &value.kind {
-                            ValueKind::Alloca(inner) => {
-                                write!(f, "  let {} = alloca {}, {}\n",
-                                    value, inner.elem_type, inner.num_elements)
-                            },
-                            ValueKind::Binary(inner) => {
-                                let lhs = self.get_value(inner.lhs);
-                                let rhs = self.get_value(inner.rhs);
-                                write!(f, "  let {} = {} {}, {}\n",
-                                        value, inner.op, lhs, rhs)
-                            },
-                            ValueKind::Load(inner) => {
-                                let addr = self.get_value(inner.addr);
-                                write!(f, "  let {} = load {}\n",
-                                        value, addr)
-                            },
-                            ValueKind::Store(inner) => {
-                                let stored = self.get_value(inner.value);
-                                let addr = self.get_value(inner.addr);
-                                write!(f, "  let {} = store {}, {}\n",
-                                        value, stored, addr)
-                            },
-                            ValueKind::FnCall(inner) => {
-                                let callee = inner.callee.clone();
-                                let args = inner.args.iter().cloned().map(| argref| self.get_value(argref));
-                                write!(f, "  let {} = call {}, {}\n",
-                                        value, callee, args.format(", "))
-                            },
-                            ValueKind::Offset(inner) => {
-                                let elem_type = inner.elem_type.clone();
-                                let addr = self.get_value(inner.base_addr);
-                                let indices = inner.index.iter().cloned().map(| argref| self.get_value(argref));
-                                let bounds = inner.bounds.clone();
-                                write!(f, "  let {} = offset {}, {}, {}\n",
-                                        value, elem_type, addr,
-                                        indices.into_iter().zip(bounds.into_iter())
-                                        .format_with(", ", | (index, bound), f | {
-                                            match bound {
-                                                Some(bound) => f(&format_args!("[{} < {}]", index, bound)),
-                                                None => f(&format_args!("[{} < none]", index))
-                                            }
-                                        })
-                                    )
-                            }
-                            _ => panic!("invalid instruction {}", value)
-                        }?;
+                        write!(f, "{}", value.wrap_context(self))?;
                     };
 
                     match &basic_block.terminator {
