@@ -667,7 +667,6 @@ $ accipit examples/factorial.acc
 10
 # `putint` print result
 3628800
-()
 ```
 
 ## 你的任务

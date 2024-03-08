@@ -140,7 +140,7 @@ impl FromStr for Val {
 impl fmt::Display for Val {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Val::Unit => write!(f, "()"),
+            Val::Unit => Ok(()),
             Val::Integer(inner) => write!(f, "{}", inner),
             Val::Bool(inner) => write!(f, "{}", inner),
             Val::Pointer(inner) => write!(f, "<inner pointer>: {:?}", inner),
@@ -283,6 +283,7 @@ impl Val {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Frame {
     pub frame_val_env: SecondaryMap<ValueRef, Val>,
     pub frame_memory: SecondaryMap<ValueRef, Vec<Val>>,
@@ -323,6 +324,7 @@ impl Frame {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ProgramEnv {
     /// current working basic block.
     pub position: Option<BlockRef>,
