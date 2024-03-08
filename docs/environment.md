@@ -65,7 +65,7 @@ cargo run -- examples/factorial.acc --entry factorial 10
 ```
 ...
 
-Interepted: Ok(Integer(3628800))
+3628800
 ```
 
 ### Runtime 编译

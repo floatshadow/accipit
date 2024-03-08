@@ -643,7 +643,8 @@ Arguments:
   [ARGS]...  Specify the argument passes to the entry function
 
 Options:
-  -o, --output <OUTPUT>  Specify the output file
+  -o, --output <OUTPUT>  Specify the output file (unused option)
+      --dump-module      Dump parsed module, producing explicit type annotation and different symbol prefix
   -e, --entry <ENTRY>    Specify the certain function as the entry function [default: main]
   -h, --help             Print help
   -V, --version          Print version
@@ -654,7 +655,7 @@ Options:
 ```bash
 $ accipit examples/factorial.acc --entry factorial 10
 ...
-Interepted: Ok(Integer(3628800))
+3628800
 ```
 
 如果不指定调用某个函数，则默认从 `main` 开始，从 stdin/stdout 输入输出：
@@ -666,7 +667,7 @@ $ accipit examples/factorial.acc
 10
 # `putint` print result
 3628800
-Interepted: Ok(Unit)
+()
 ```
 
 ## 你的任务
