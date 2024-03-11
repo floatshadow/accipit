@@ -25,12 +25,12 @@ class Instruction {
 四元组看似很简单，但是有一个比较严重的问题，就是不太方便做代码优化，请看下面这条例子：
 
 ```plaintext
-y = a add 1
-x = y sub b
-y = x add b
+%y = %a add 1
+%x = %y sub %b
+%y = %x add %b
 ...
 
-result = x add y
+%result = %x add %y
 ```
 
 代码的优化经常需要追踪数据流，也就是追踪四元组中两个源变量的值是由哪条指令进行的赋值，又被哪些指令使用.
@@ -55,15 +55,17 @@ result = x add y
 - 要么每次从后往前扫描，第一个遇到的对源变量的赋值，就是最新的值，而且对于循环可能需要特殊处理，这样时间开销很大.
 - 要么维护一个稠密的集合，记录当前指令前所有变量最新的赋值发生在哪里，这样在变量很多的情况下空间开销很大.
 
-上述这种关系被称为 use-def chain，静态单赋值形式 (SSA) 的优点之一就在于它能较好地维护 use-def chain.SSA 的一个特点是每个变量仅赋值一次，因此，上面的代码需要写成:
+上述这种“**某个源变量最新的赋值发生在哪里**”关系被称为使用-定义链 (use-def chain)，静态单赋值形式 (SSA) 的优点之一就在于它能较好地维护 use-def chain.
+SSA 的一个特点是每个变量仅赋值一次，如果存在某个多次赋值的变量 `x`，你需要对它重命名，例如把第 0 次、第 1 次...第 n 次重新赋值重命名为 `x.0` `x.1` ... `x.n`，并且使用变量 `x` 也可以也必须准确地指明是重命名后的 `x.0` `x.1` ... `x.n` 之中的哪个.
+因此，上面的代码需要写成:
 
 ```plaintext
-y.0 = a.0 add 1
-x.0 = y.0 sub b.0
-y.1 = x.0 add b.0
+%y.0 = %a.0 add 1
+%x.0 = %y.0 sub %b.0
+%y.1 = %x.0 add %b.0
 ...
 
-result.1 = x.0 add y.1
+%result.1 = %x.0 add %y.1
 ```
 
 - 由于只赋值一次，每个赋值的变量名都是独一无二的，因此你可以把赋值看作“定义” (define) 了一个新变量，这样我们就能明确地知道源操作数的值是怎么产生的.
@@ -87,6 +89,22 @@ class Instruction {
 }
 ```
 
+进一步地，我们就可以直接忽略繁琐的重命名，直接简化为：
+
+```plaintext
+// somewhere `a` is defined as `%0`
+%0 = ...
+// somewhere `b` is defines as `%1`
+%1 = ...
+
+%2 = %0 add 1
+%3 = %2 sub %1
+%4 = %3 add %1
+...
+
+%i_dont_know_the_number = %3 add %4
+```
+
 因此我们可以发现，SSA 风格的指令中，指令**使用** (use) 的操作数 `src0` 和 `src1` 直接指向了变量的**定义** (definition) 处，因此指令之间就像一个图一样标记了数据的流动。
 使用 SSA 风格相比四元组风格具有以下优点：
 
@@ -102,6 +120,7 @@ class Instruction {
     res = #1 + #2
     ```
 
+- 方便优化，例如基于迭代的数据流分析可以直接沿着 use-def chain 追踪，这种方式是“稀疏”的，因为不用像经典方法那样在每个程序点维护一个包含所有变量的稠密集合.
 
 如果你有兴趣，可以阅读 Cliff Click 的 [From Quads to Graphs](http://softlib.rice.edu/pub/CRPC-TRs/reports/CRPC-TR93366-S.pdf)，以及 [SSA Book](https://link.springer.com/book/10.1007/978-3-030-80515-9)。
 
