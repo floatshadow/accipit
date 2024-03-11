@@ -454,33 +454,41 @@ impl IRBuilder {
         annotated_type: Option<Type>
     ) -> ValueRef {
         let inner_name = self.get_unique_name(&name);
-        let funcref = self.module.get_function_ref(&callee);
-        let function = self.module.get_function(funcref);
-        let args_value = args.iter().cloned()
-            .map(| argref | self.get_value(argref))
-            .collect::<Vec<_>>();
+        let ret_ty = match callee.as_str() {
+            // do nothing for runtime IO, postphone to executor.
+            "getint" |  "getch" |  "getarray" => Type::get_i32(),
+            "putint" | "putch" | "putarray" | "starttime" | "stoptime" => Type::get_unit(),
+            _ => {
+                let funcref = self.module.get_function_ref(&callee);
+                let function = self.module.get_function(funcref);
+                let args_value = args.iter().cloned()
+                    .map(| argref | self.get_value(argref))
+                    .collect::<Vec<_>>();
 
-        assert!(
-            function.ty.is_function_type(),
-            "expect callee function `{}` function type, but found `{}` type",
-            function.name, function.ty
-        );
+                assert!(
+                    function.ty.is_function_type(),
+                    "expect callee function `{}` function type, but found `{}` type",
+                    function.name, function.ty
+                );
 
-        let ret_ty = function.ty.get_function_ret_type().unwrap();
-        let params_ty = function.ty.get_function_params_type().unwrap();
+                let ret_ty = function.ty.get_function_ret_type().unwrap();
+                let params_ty = function.ty.get_function_params_type().unwrap();
 
-        assert!(
-            params_ty.len() == args_value.len(),
-            "function call `{}` has different number of arguments with function prototype `{}`",
-            inner_name, callee
-        );
+                assert!(
+                    params_ty.len() == args_value.len(),
+                    "function call `{}` has different number of arguments with function prototype `{}`",
+                    inner_name, callee
+                );
 
-        assert!(
-            params_ty.iter().zip(args_value.iter())
-            .all( | (param_ty, arg_value) | param_ty.eq(&arg_value.ty)),
-            "function call `{}` has different argument type with function prototyp `{}`",
-            inner_name, callee
-        );
+                assert!(
+                    params_ty.iter().zip(args_value.iter())
+                    .all( | (param_ty, arg_value) | param_ty.eq(&arg_value.ty)),
+                    "function call `{}` has different argument type with function prototyp `{}`",
+                    inner_name, callee
+                );
+                ret_ty
+            }
+        };
 
         if let Some(check_ty) = annotated_type {
             assert!(

@@ -7,10 +7,13 @@ use crate::ir::{
     values,
     structures::*
 };
-use crate::utils::display_helper::*;
+use crate::utils::{
+    to_c_str,
+    display_helper::*
+};
 
 use slotmap::{SlotMap, SecondaryMap};
-use scanf::scanf;
+use libc::*;
 use colored::Colorize;
 
 #[derive(Debug)]
@@ -408,21 +411,18 @@ impl ProgramEnv {
     }
 
     pub fn get_memory(&self, base: ValueRef) -> &Vec<Val> {
-        self.search_value_env(base)
-            .expect("cannot find value in current scope")
+        self.get_global_frame()
             .get_local_memory(base)
     }
 
     pub fn get_memory_mut(&mut self, base: ValueRef) -> &mut Vec<Val> {
-        self.search_value_env_mut(base)
-            .expect("cannot find value in current scope")
+        self.get_global_frame_mut()
             .get_local_memory_mut(base)
     }
 
     pub fn initialize_memory(&mut self, base: ValueRef, size: usize) {
         let unitialized_object = vec![Val::Undefined; size];
-        self.search_value_env_mut(base)
-            .expect("cannot find value in current scope")
+        self.get_global_frame_mut()
             .frame_memory
             .insert(base, unitialized_object);
     }
@@ -513,12 +513,22 @@ pub fn single_step(
             match inner.callee.as_str() {
                 "getint" => {
                     let mut value: i32 = 0;
-                    scanf!("{i32}", value).expect("'getint' expect a 'int' input");
+                    unsafe {
+                        assert!(
+                            scanf(to_c_str("%d").as_ptr(), &mut value as *mut i32) == 1,
+                            "'getint' expect a 'int' input"
+                        );
+                    }
                     Ok(Val::Integer(value))
                 },
                 "getch" => {
-                    let mut character: char = 0 as char;
-                    scanf!("{char}", character).expect("'getch' expect a 'char' input");
+                    let mut character: c_char = 0;
+                    unsafe {
+                        assert!(
+                            scanf(to_c_str("%c").as_ptr(), &mut character as *mut c_char) == 1,
+                            "'getch' expect a 'char' input"
+                        );
+                    }
                     Ok(Val::Integer(character as i32))
                 },
                 "getarray" => {
@@ -527,12 +537,22 @@ pub fn single_step(
                     match addr {
                         Val::Pointer(inner) => {
                             let mut n: i32 = 0;
-                            scanf!("{i32}", n).expect("'getarray' expect a 'int' input as array size");
+                            unsafe {
+                                assert!(
+                                    scanf(to_c_str("%d").as_ptr(), &mut n as *mut i32) == 1,
+                                    "'getarray' expect a 'int' input as array size"
+                                );
+                            }
                             let buffer = env.get_memory_mut(inner.base);
                             assert!(n >= 0, "'{}' expect a non-negative array size", "getarray".bold());
                             for i in 0..n {
                                 let mut val: i32 = 0;
-                                scanf!("{i32}", val).expect("expect a 'int' input as array element");
+                                unsafe {
+                                    assert!(
+                                        scanf(to_c_str("%d").as_ptr(), &mut val as *mut i32) == 1,
+                                        "expect a 'int' input as array element"
+                                    );
+                                }
                                 assert!(inner.offset_within + (i as usize) < inner.size,
                                         "'{}' access memory out of bounds", "getarray".bold()
                                 );
@@ -549,6 +569,8 @@ pub fn single_step(
                     match output_value {
                         Val::Integer(inner) => {
                             print!("{}", inner);
+                            use std::io::Write;
+                            std::io::stdout().flush().expect("unable to flush output stream after 'putint'");
                             Ok(Val::Unit)
                         },
                         _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only", "putint".bold())))
@@ -560,6 +582,8 @@ pub fn single_step(
                     match output_value {
                         Val::Integer(inner) => {
                             print!("{}", char::from_u32(inner as u32).expect("ilegal char value in 'putch'"));
+                            use std::io::Write;
+                            std::io::stdout().flush().expect("unable to flush output stream after 'putch'");
                             Ok(Val::Unit)
                         },
                         _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only","putch".bold())))
@@ -567,7 +591,7 @@ pub fn single_step(
                 },
                 "putarray" => {
                     assert!(args_val.len() == 2, "'{}' expect 2 argument", "putarray".bold());
-                    let num = match &args_val[1] {
+                    let num = match &args_val[0] {
                         Val::Integer(inner) => Ok(inner.clone()),
                         _ => Err(ExecutionError::InternalError(format!("'{}' expect integer type argument as array size", "putarray".bold())))
                     }?;
@@ -587,6 +611,8 @@ pub fn single_step(
                                     _ => panic!("'{}' accept a non integer array", "putarray".bold())
                                 }
                             }
+                            use std::io::Write;
+                            std::io::stdout().flush().expect("unable to flush output stream after 'putarray'");
                             Ok(Val::Unit)
                         },
                         _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 pointer type argument only", "getarray".bold())))
@@ -595,6 +621,8 @@ pub fn single_step(
                 "starttime" | "stoptime" => {
                     print!("{} '{}' and '{}' do nothing in interpreter",
                             "Warning: ".yellow(), "starttime".bold(), "stoptime".bold());
+                    use std::io::Write;
+                    std::io::stdout().flush().expect("unable to flush output stream after 'start/stoptime'");
                     Ok(Val::Unit)
                 },
                 _ => {
