@@ -41,7 +41,7 @@ FuncFParam    ::= BType IDENT ["[" "]" {"[" INT_CONST "]"}];
 Block         ::= "{" {BlockItem} "}";
 BlockItem     ::= Decl | Stmt;
 Stmt          ::= LVal "=" Exp ";"
-                | [Exp] ";"
+                | Exp ";"
                 | Block
                 | "if" "(" Exp ")" Stmt ["else" Stmt]
                 | "while" "(" Exp ")" Stmt
