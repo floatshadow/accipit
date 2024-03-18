@@ -1,0 +1,22 @@
+int f(int array[][2][2]) {
+  int a = array[0][0][0];
+  int b = array[0][0][1];
+
+  return (a+b);
+}
+
+int main(){
+  int array[2][2][2];
+
+  array[0][0][0] = 1;
+  array[0][0][1] = 2;
+  array[0][1][0] = 3;
+  array[0][1][1] = 4;
+  array[1][0][0] = 5;
+  array[1][0][1] = 6;
+  array[1][1][0] = 7;
+  array[1][1][1] = 8;
+
+  putint(f(array[2][2][2]));
+  return 0;
+}

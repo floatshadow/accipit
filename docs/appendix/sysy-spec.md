@@ -94,7 +94,7 @@ identifier ::= identifier-nondigit
 SysY 语言中数值常量可以是整型数 `INT_CONST` (integer-const), 其规范如下:
 
 ```ebnf
-integer-const       ::= digit { digit };
+integer-const ::= digit { digit };
 ```
 
 数值常量的范围为 $[0, 2^{31} - 1]$, 不包含负号.

@@ -1,0 +1,9 @@
+int f() {
+  return 10;
+}
+
+int main() {
+  int f = 20;
+  putint(f);
+  return 0;
+}
