@@ -133,12 +133,21 @@ int main(){
 
 我们的测试完全采用输入输出形式, 即对于符合语法的源代码, 你的程序正常运行后正常退出, 对于不符合语法的源代码, 你的程序应该能够检测出错误报错后返回非0值, 我们对报错的格式没有要求. 测试文件中的注释供你参考. 
 
-!!!tip "关于 Parser"
-    由于我们的测试只针对输入输出, 你完全可以不使用 Flex 和 Bison. Bison/Yacc 这类工具一般被称为 Parser Generator, 他们接受一系列文法定义然后生成一个 Parser (更确切的说 Bison 生成的是 Parser 的源码, 这样甚至不需要有任何额外的依赖). 
+???tip "关于 Parser"
+    
+    由于我们的测试只针对输入输出, 你完全可以不使用 Flex 和 Bison. Bison/Yacc 这类工具一般被称为 Parser Generator, 他们接受一系列文法定义然后生成一个 parser (更确切的说 Bison 生成的是 parser 的源码, 这样甚至不需要有任何额外的依赖). 
 
     你也可以自己尝试写一个词法分析器和基于递归下降的语法分析器. 这件事并不像你想象的那样困难, 我们推荐 [crafting interpreter](https://craftinginterpreters.com/contents.html) 中语法分析内容供你参考. 
 
-    如果你想尝试手写递归下降或者想尝试 Parser Generator 之外的语法分析手段, 助教推荐一种叫 Parser Combinator 的范式.
+    如果你想尝试手写递归下降或者想尝试 Parser Generator 之外的语法分析手段, 助教推荐一种叫 Parser Combinator 的范式. 一般 Parser Combinator 库会提供一些简单的 parser (比如说"吃掉一个固定的字符串", 你在手写递归下降的时候也会用到) 并提供组合他们的方法 (也就是 combinator, 比如说串联/选择). 所以本质上 Parser Combinator 是一种编写递归下降 parser 的工具.
+
+    也许课上讲的顺序是从递归下降分析过渡到 LL(k) 预测分析的, 你可能会觉得递归下降 parser 识别的语言是 LL(k) 识别的语言的子集, 但是实际上允许回溯的递归下降 parser 是更强的. 我们用 [Parsing Expression Grammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar) (PEG) 来形式化描述递归下降 parser, 正如 CFG 可以对应 Pushdown Automaton.
+
+    PEG 的神奇之处在于, 它可以识别一些非 CFG 语言, 比如 $a^n b^n c^n$ (也许你在计算理论里见过如何通过 pumping lemma 证明这个语言不是 CFL). 但这并不意味着 PEG 比 CFG 强, 首先你在实际使用的时候仍然需要考虑左递归的问题, 其次有一些 CFL 难以用 PEG 识别, 比如说回文串. 目前是否存在一个无法被 PEG 识别的 CFL 仍然是一个 open problem. 
+
+    你可以在[这个项目](https://git.zju.edu.cn/accsys/peg-test)里看到一个 PEG parser 是如何识别 $a^n b^n c^n$ 的, 以及为什么它难以识别回文串(项目里的写法实际上只能识别一个长度为 3 的回文前缀, 这和 PEG 的确定性有关).
+
+    我们的 [IR 工具](https://git.zju.edu.cn/accsys/accipit)和[样例编译器](https://git.zju.edu.cn/accsys/accsys-rs)使用了 Rust 的 Parser Combinator 库 [chumsky](https://github.com/zesterer/chumsky) 和 [nom](https://github.com/rust-bakery/nom), 他们都支持回溯功能, 所以可以识别任何 PEG, 也即可以生成(带回溯的)递归下降 parser.
 
 ## 实验提交
 
