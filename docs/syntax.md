@@ -1,5 +1,7 @@
 # 实验1 词法与语法分析
 
+!!! warning 注意 请及时关注工具/模板/样例的更新, 这些材料都会放在[这里](https://git.zju.edu.cn/accsys)
+
 ## 词法分析
 
 词法分析的目的是将源代码(一个个字符)解析成一个个token. Token 就是词法分析的最小单元, 表示一个程序有意义的最小分割. 下表为常见的token类型和样例:
@@ -87,6 +89,8 @@ int main() {
 
 为了减轻你的负担, 我们只要求你实现**简化版**的 SysY 语言, 见[附录](appendix/sysy-spec.md). 
 
+> 其实是简化了两次的 SysY, 我们甚至删去了 Const 和数组初始化列表这两个颇为麻烦的语法.
+
 你的编译器必须支持一个命令行参数的情形. 假设你的程序名为 compiler 且在当前目录下, 那么你的编译器应该能够以以下方式运行：
 
 ```bash
@@ -135,7 +139,7 @@ int main(){
 
 ???tip "关于 Parser"
     
-    由于我们的测试只针对输入输出, 你完全可以不使用 Flex 和 Bison. Bison/Yacc 这类工具一般被称为 Parser Generator, 他们接受一系列文法定义然后生成一个 parser (更确切的说 Bison 生成的是 parser 的源码, 这样甚至不需要有任何额外的依赖). 
+    由于我们的测试只针对输入输出, 你完全可以不使用 Flex 和 Bison 而去使用 ANTLR 等工具. Bison/Yacc/ANTLR 这类工具一般被称为 Parser Generator, 他们接受一系列文法定义然后生成一个 parser (更确切的说 Bison 生成的是 parser 的源码, 这样甚至不需要有任何额外的依赖). 
 
     你也可以自己尝试写一个词法分析器和基于递归下降的语法分析器. 这件事并不像你想象的那样困难, 我们推荐 [crafting interpreter](https://craftinginterpreters.com/contents.html) 中语法分析内容供你参考. 
 
@@ -150,24 +154,24 @@ int main(){
     我们的 [IR 工具](https://git.zju.edu.cn/accsys/accipit)和[样例编译器](https://git.zju.edu.cn/accsys/accsys-rs)使用了 Rust 的 Parser Combinator 库 [chumsky](https://github.com/zesterer/chumsky) 和 [nom](https://github.com/rust-bakery/nom), 他们都支持回溯功能, 所以可以识别任何 PEG, 也即可以生成(带回溯的)递归下降 parser.
 
 ## 实验提交
+实验一和实验二统一提交一次. 你需要提供:
+1. 源程序的压缩包. 
+2. 一份 PDF 格式的实验报告, 内容包括:
+    - 你的程序实现了哪些功能? 简要说明如何实现这些功能.
+    - 你的程序应该如何被编译? 请详细说明应该如何编译你的程序. 无法顺利编译将导致助教无法对你的程序所实现的功能进行任何测试, 从而丢失相应的分数.
+    - 实验报告的长度不得超过 3 页. 所以实验报告中需要重点描述的是你的程序中的亮点, 是你认为最个性化/最具独创性的内容, 尤其要避免大段地向报告里贴代码.
 
-1. 源程序的压缩包, 即 `src` 目录下的所有文件. 
-2. 一份PDF格式的实验报告, 内容包括:
-    - 你的程序实现了哪些功能? 简要说明如何实现这些功能
-    - 你的程序应该如何被编译? 请详细说明应该如何编译你的程序. 无法顺利编译将导致助教无法对你的程序所实现的功能进行任何测试, 从而丢失相应的分数
-    - 实验报告的长度不得超过3页. 所以实验报告中需要重点描述的是你的程序中的亮点, 是你认为最个性化、最具独创性的内容, 尤其要避免大段地向报告里贴代码
-
-> 记得在完成实验时使用 Git 在本地提交你的代码. 
+> 建议使用 Git 管理你的代码
 
 ## 实现建议
 
 !!!tip "AST表示与打印"
-    AST 是编译器的核心数据结构之一, 在尝试使用不同编程语言时会有不同的技术方案,  我们以 `Stmt` 为例, 介绍在 C, C++, Rust 中表示语法树这类数据结构的一种方法. 
+    AST 是编译器的核心数据结构之一, 在尝试使用不同编程语言时会有不同的技术方案, 我们以 `Stmt` 为例, 介绍在 C, C++, Rust 中表示语法树这类数据结构的一种方法. 
 
     === "C"
 
-        C语言常用的技巧是 enum + union：
-        ``` c
+        C语言常用的技巧是 enum + union:
+        ``` c title="ast.h"
         enum StmtKind {
             STMT_EXPR,
             STMT_IF,
@@ -187,9 +191,9 @@ int main(){
         ```
 
         我们使用一个枚举类型来表示语法树的节点类型, 并且使用 union 来存储不同类型的节点. 
-        而在打印语法树时, 只需要 switch 递归遍历即可：
+        而在打印语法树时, 只需要 switch 递归遍历即可:
 
-        ``` c
+        ```c title="ast.h"
         void print_stmt(struct Stmt *stmt) {
             switch (stmt->kind) {
                 case STMT_EXPR:
@@ -204,64 +208,103 @@ int main(){
                 case STMT_RETURN:
                     print_return_stmt(stmt->return_stmt);
                     break;
+                default:
+                    raise_error();
             }
         }
         ```
 
     === "C++"
+        C++ 除了可以使用 C 的方法外, 还可以使用基于面向对象的技术：
 
-        C++ 除了可以使用C的方法外, 还可以使用基于面向对象的技术：
-
-        ``` c++
-        class BaseStmt {
+        ``` c++ title="ast.h"
+        struct Node {
         };
 
-        class ExprStmt : public BaseStmt {
-        public:
-            ExprStmt(Expr *expr) : expr_(expr) {}
-        private:
-            Expr *expr_;
-        };
-
-        class IfStmt : public BaseStmt {
-            ...
+        struct IfStmt : public Node {
+            Node *condition;
+            Node *then;
+            Node *els;
+            IfStmt(Node *condition, Node *then, Node *els) {}
         }
         ```
 
-        在打印语法树时, 基于面向对象的技术可以使用虚函数来实现：
+        在打印语法树时, 基于面向对象的技术可以使用虚函数来实现: 
 
-        ``` c++
-        class BaseStmt {
-        public:
+        ``` c++ title="ast.h"
+        struct Node {
             virtual void print() = 0;
         };
         
-        class ExprStmt : public BaseStmt {
-        public:
-            ExprStmt(Expr *expr) : expr_(expr) {}
+        struct IfStmt : public Node {
+            Node *condition;
+            Node *then;
+            Node *els;
+            IfStmt(Node *condition, Node *then, Node *els) {/* ... */}
             void print() override {
-                expr_->print();
+                printf("If\n");
+                condition->print();
+                printf("Then\n");
+                then->print();
+                if (els != nullptr) {
+                    printf("Else\n");
+                    els->print();
+                }
             }
-        private:
-            Expr *expr_;
-        };
-        
+        }
         ...
         ```
 
-    === "Rust"
-        熟悉Rust的同学一定会使用 enum, 即枚举类型来表示AST：
+        不过你可以考虑自己实现一个简易的 RTTI (Runtime Type Identification), 类似于 python 中的 `isinstance`, 本质上还是 C 的 enum + union.
+
+        ```c++ title="ast.h"
+        enum NodeKind {
+            ND_Expr,
+            ND_IfStmt,
+            ND_WhileStmt,
+            ...
+        }
+        struct Node {
+            NodeKind node_kind;
+            Node(NodeKind kind): node_kind(kind) { }
+            template <typename T>
+            bool is() {
+                return value_type == std::remove_pointer_t<T>::this_kind;
+            }
+            template <typename T>
+            T as() {
+                if (is<T>()) {
+                    return static_cast<T>(this);
+                } else {
+                    return nullptr;
+                }
+            }
+        };
+        
+        struct IfStmt : public Node {
+            constexpr static NodeKind this_kind = ND_IfStmt;
+            Node *condition;
+            Node *then;
+            Node *els;
+            IfStmt(Node *condition, Node *then, Node *els): Node(this_kind) {/* ... */}
+        }
+
+        void print(Node *node) {
+            if (IfStmt *stmt = node->as<IfStmt *>()) {
+                /* ... */
+            }
+        }
+        ```
+
+    === "Rust/OCaml/Modern C++"
+        熟悉 Rust 的同学一定会使用 enum, 即枚举类型来表示AST：
 
         ```rust
-        enum Stmt {
-            ExprStmt(Expr),
+        enum Node {
+            Expr(Expr),
             IfStmt(IfStmt),
             WhileStmt(WhileStmt),
             ReturnStmt(ReturnStmt),
-        }  
-
-        struct ExprStmt {
-            expr: Expr,
         }
 
         struct IfStmt {
@@ -274,7 +317,7 @@ int main(){
         ```rust
         fn print_stmt(stmt: &Stmt) {
             match stmt {
-                Stmt::ExprStmt(expr_stmt) => print_expr(&expr_stmt.expr),
+                Stmt::Expr(expr) => print_expr(expr),
                 Stmt::IfStmt(if_stmt) => print_if_stmt(if_stmt),
                 Stmt::WhileStmt(while_stmt) => print_while_stmt(while_stmt),
                 Stmt::ReturnStmt(return_stmt) => print_return_stmt(return_stmt),
@@ -282,4 +325,10 @@ int main(){
         }
         ```
 
-该实验技术难度并不大, 但需要同学们掌握 Flex, Bison 工具链的使用并且实现整个语言的词法分析和语法分析, 整体过程极为繁琐, 我们建议同学们尽早开始实验. 
+        这套东西叫代数数据类型 (Algebraic Data Type, ADT) 和模式匹配 (pattern matching), 你可以在很多函数式编程语言中见到它 (比如 OCaml/Haskell). 
+        
+        当然如果你足够热爱 C++ 或者足够痛恨 Rust 还想用这套的话也不是不行, 这里给出一个基于 `std::variant` 和 `std::visit` 的[实现](https://gcc.godbolt.org/z/jKMacTW37) (这个方法来自于 [cppreference](https://en.cppreference.com/w/cpp/utility/variant/visit)). 这就是 Modern C++.
+
+我们给出了一个使用 rust 编写的样例 [parser](https://git.zju.edu.cn/accsys/accsys-rs), 它足以通过 Lab 1 的测试. 同时我们提供了一份 CMake 的[项目模板](https://git.zju.edu.cn/accsys/accsys-cmake-template), 里面引入了 `fmt` 库, 并以上述实现建议中 C++ 的第二种写法实现了一个简单的表达式 parser (这种风格更接近 LLVM, 你会在 Lab 3 中再次见到它).
+
+当然我们不要求你必须使用这个模板, 你可以自行编写构建系统 (make/xmake/cargo/dune) 但要在报告中注明构建方法. 上面所说的所有工具和风格仅作推荐, 你不必受此约束. 
