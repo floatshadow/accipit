@@ -10,6 +10,12 @@
 └── tests/      # 各 lab 的测试输入
 ```
 
+参考材料:
+- [样例编译器](https://git.zju.edu.cn/accsys/accsys-rs) (尚未完工)
+- [PEG 和 Parser Combinator 的样例](https://git.zju.edu.cn/accsys/peg-test)
+- [SysY 运行时库](https://git.zju.edu.cn/accsys/sysy-runtime-lib)
+- [CMake 项目模板](https://git.zju.edu.cn/accsys/accsys-cmake-template)
+
 ## 实验介绍
 具体来说整个实验分为五个小实验：
 
