@@ -154,9 +154,12 @@ int main(){
     我们的 [IR 工具](https://git.zju.edu.cn/accsys/accipit)和[样例编译器](https://git.zju.edu.cn/accsys/accsys-rs)使用了 Rust 的 Parser Combinator 库 [chumsky](https://github.com/zesterer/chumsky) 和 [nom](https://github.com/rust-bakery/nom), 他们都支持回溯功能, 所以可以识别任何 PEG, 也即可以生成(带回溯的)递归下降 parser.
 
 ## 实验提交
+
 实验一和实验二统一提交一次. 你需要提供:
+
 1. 源程序的压缩包. 
 2. 一份 PDF 格式的实验报告, 内容包括:
+
     - 你的程序实现了哪些功能? 简要说明如何实现这些功能.
     - 你的程序应该如何被编译? 请详细说明应该如何编译你的程序. 无法顺利编译将导致助教无法对你的程序所实现的功能进行任何测试, 从而丢失相应的分数.
     - 实验报告的长度不得超过 3 页. 所以实验报告中需要重点描述的是你的程序中的亮点, 是你认为最个性化/最具独创性的内容, 尤其要避免大段地向报告里贴代码.
