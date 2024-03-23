@@ -104,7 +104,7 @@ int main() {
 
 ### 测试
 
-我们提供了一个测试脚本 `test.py` 来测试你的编译器, 使用 `python test.py -h` 查看帮助. 
+[测试样例](https://git.zju.edu.cn/accsys/accipit/-/tree/main/tests)放在了 `tests` 文件夹下。我们提供了一个测试脚本 `test.py` 来测试你的编译器, 使用 `python test.py -h` 查看帮助. 
 
 假设你的程序名为 compiler 且在当前目录下, 运行以下命令来测试你的编译器：
 
