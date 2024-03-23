@@ -319,12 +319,12 @@ int main(){
         在打印语法树时, 我们可以使用 match 语法来实现：
 
         ```rust
-        fn print_stmt(stmt: &Stmt) {
-            match stmt {
-                Stmt::Expr(expr) => print_expr(expr),
-                Stmt::IfStmt(if_stmt) => print_if_stmt(if_stmt),
-                Stmt::WhileStmt(while_stmt) => print_while_stmt(while_stmt),
-                Stmt::ReturnStmt(return_stmt) => print_return_stmt(return_stmt),
+        fn print_node(node: &Node) {
+            match node {
+                Node::Expr(expr) => print_expr(expr),
+                Node::IfStmt(if_stmt) => print_if_stmt(if_stmt),
+                Node::WhileStmt(while_stmt) => print_while_stmt(while_stmt),
+                Node::ReturnStmt(return_stmt) => print_return_stmt(return_stmt),
             }
         }
         ```
