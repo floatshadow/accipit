@@ -30,7 +30,7 @@ Decl          ::= VarDecl;
 
 VarDecl       ::= BType VarDef {"," VarDef} ";";
 VarDef        ::= IDENT "=" InitVal
-                | IDENT "[" INT_CONST "]" {"[" INT_CONST "]"};
+                | IDENT {"[" INT_CONST "]"};
 InitVal       ::= Exp;
 
 FuncDef       ::= FuncType IDENT "(" [FuncFParams] ")" Block;
