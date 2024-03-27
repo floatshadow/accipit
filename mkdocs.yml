@@ -40,6 +40,7 @@ nav:
     - SysY 语言规范: appendix/sysy-spec.md
     - SysY 运行时库: appendix/sysy-runtime.md
     - Accipit IR 规范: appendix/accipit-spec.md
+    - FAQ: appendix/faq.md
 
 plugins:
   - search
