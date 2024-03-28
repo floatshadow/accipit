@@ -35,11 +35,11 @@ nav:
   - Lab 3 中间代码生成: middle-ir-gen.md
   - 附录:
     - appendix/index.md
-    - 从四元组到静态单赋值形式: appendix/quads2ssa.md
-    - SysY 结构与 Accipit IR 的对应: appendix/sysy-accipit-mapping.md
     - SysY 语言规范: appendix/sysy-spec.md
     - SysY 运行时库: appendix/sysy-runtime.md
     - Accipit IR 规范: appendix/accipit-spec.md
+    - 从四元组到静态单赋值形式: appendix/quads2ssa.md
+    - SysY 结构与 Accipit IR 的对应: appendix/sysy-accipit-mapping.md
     - FAQ: appendix/faq.md
 
 plugins:
