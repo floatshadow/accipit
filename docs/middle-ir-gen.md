@@ -448,6 +448,129 @@ let %2 = add %0, %1
 我们可以将表达式的翻译规则总结如下：
 
 
+<style>
+code {
+    font-family: 'Jetbrains Mono', Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+}
+pre {
+    margin: 1em 0;
+    overflow: auto;
+}
+pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+}
+.sourceCode {
+    background-color: transparent;
+    overflow: visible;
+}
+table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+    margin-bottom: 0.75em;
+}
+tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+}
+th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+/* The extra [class] is a hack that increases specificity enough to
+    override a similar rule in reveal.js */
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+    { counter-reset: source-line 0; }
+pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+    }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+    {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
 
 <table>
 <colgroup>
@@ -495,7 +618,7 @@ return create_function_call(function, args_list, current_bb);</code></pre></td>
 </tbody>
 </table>
 
-其中 `create_load` `create_binary` `create_function_call` 是生成指令的接口，它们的最后一个参数是基本块 `basic_block`，表示指令在基本块 `basic_block` 中插入，由于基本块中指令是线性的，你可以在基本块中维护一个 `vector`，在末端不断加入指令即可，类似于：
+其中 `create_load` `create_binary` `create_function_call` 等是生成指令的接口，它们的最后一个参数是基本块 `current_block`，表示指令在基本块 `current_block` 中插入，由于基本块中指令是线性的，你可以在基本块中维护一个 `vector`，在末端不断加入指令即可，类似于：
 
 ```cpp
 void insert_instruction(Instruction *inst, BasicBlock *block) {
@@ -519,12 +642,12 @@ void insert_instruction(Instruction *inst, BasicBlock *block) {
 translate_stmt(stmt, symbol_table, current_bb) -> exit_bb
 ```
 
-局部变量（包括函数参数）声明语句需要翻译成 `alloca` 指令，用来将它们放在栈空间上。
-首先你需要注意，所有的 `alloca` 指令都应该放在整个函数开头的那一个基本块内，而不是局部变量声明出现的那个语句块对应的基本块。
-`alloca` 指令的作用域是整个函数，如果你“原地翻译”，那么可以想象一下 WHILE 循环内声明一个局部变量——每次循环都分配栈空间，循环次数一多就爆栈了——但其实我们只需要为这个变量分配一次栈空间即可。
-其次，正如上文 `translate_expr` 提到的，你需要即时更新符号表 `sym_table`。
+局部变量（包括函数参数）声明语句需要翻译成 `alloca` 指令，用来将它们放在栈空间上.
+首先你需要注意，所有的 `alloca` 指令都应该放在整个函数开头的入口基本块内，而不是局部变量声明出现的那个语句块对应的基本块.
+`alloca` 指令的作用域是整个函数，如果你“原地翻译”，那么可以想象一下 While 循环内声明一个局部变量——每次循环都分配栈空间，循环次数一多就爆栈了——但其实我们只需要为这个变量分配一次栈空间即可.
+其次，正如上文 `translate_expr` 提到的，你需要即时更新符号表 `sym_table`.
 
-由于语句块可能包含控制流的跳转，而且整个语句块整体并没有产生 Value，我们考虑 `translate_stmt` 接受一个基本块参数 `current_bb`，表示当前控制流在 `current_bb` 所表示的基本块处；返回一个基本块 `exit_bb`，表示参数 `stmt` 翻译结束后，控制流将在 `exit_bb` 所表示的基本块处基本块继续。
+由于语句块可能包含控制流的跳转，而且整个语句块整体并没有产生 Value，我们考虑 `translate_stmt` 接受一个基本块参数 `current_bb`，表示当前控制流在 `current_bb` 所表示的基本块处；返回一个基本块 `exit_bb`，表示参数 `stmt` 翻译结束后，控制流将在 `exit_bb` 所表示的基本块处基本块继续.
 在出现控制流嵌套（例如 if 套 if ）的情况下可能更方便你的处理。
 
 条件语句的生成则要复杂些，我们所定义的基本块结构中间在这里将发挥重要作用.
@@ -557,8 +680,9 @@ if (exp) {
 - 把 `true_label` 和 `false_label` 的终结指令 (Terminator) 设置为 `jmp label %exit_label` 完成控制流合并.
 
 **注意**：当你为 If 语句控制流生成 `true_label` 等新的基本块时，并**不**意味这 If 语句的真分支的语句块语句块 `Stmt` 结构里的所有子语句 `Stmt` 结构都会被翻译到 `true_label` 基本块里.
-当出现控制流嵌套时（例如 If 套 While，If 套 If 等），If 语句的真分支就不再是单独一个 `true_label` 基本块了，而是一个以 `true_label` 基本块为源点的**控制流子图**，你需要从 If 语句真分支翻译结束后所在的基本块（也就是这个控制流子图的汇点）跳转到 `exit_label`。
-这也是我们为什么在 `translate_stmt` 中选择返回一个 `exit_bb`，你可以在下面的伪代码中看到我们是如何利用这一点的。
+当出现控制流嵌套时（例如 If 套 While，If 套 If 等），If 语句的真分支就不再是单独一个 `true_label` 基本块了，而是一个以 `true_label` 基本块为源点的**控制流子图**，你需要从 If 语句真分支翻译结束后所在的基本块（也就是这个控制流子图的汇点）跳转到 `exit_label`.
+这也是我们为什么在 `translate_stmt` 中选择返回一个 `exit_bb`，你可以在下面的伪代码中看到我们是如何利用这一点的.
+
 其余类型的语句和控制流结构本质上是一样的，我们不再一一赘述.
 我们总结语句翻译的规则如下：
 
@@ -620,7 +744,7 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>cond_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> current_bb<span class="op">);</span></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>create_branch<span class="op">(</span>cond_value<span class="op">,</span> true_bb<span class="op">,</span> exit_bb<span class="op">,</span> current_bb<span class="op">);</span></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">// translate true branch</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>true_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> true_bb<span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>true_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> sym_table<span class="op">,</span> true_bb<span class="op">);</span></span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>create_jmp<span class="op">(</span>exit_bb<span class="op">,</span> true_exit_bb<span class="op">);</span></span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> exit_bb<span class="op">;</span></span></code></pre></div></td>
@@ -635,10 +759,10 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>cond_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> current_bb<span class="op">);</span></span>
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>create_branch<span class="op">(</span>cond<span class="op">,</span> true_bb<span class="op">,</span> false_bb<span class="op">,</span> current_bb<span class="op">);</span></span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>true_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt1<span class="op">,</span> true_bb<span class="op">);</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>true_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt1<span class="op">,</span> sym_table<span class="op">,</span> true_bb<span class="op">);</span></span>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>create_jmp<span class="op">(</span>exit_bb<span class="op">,</span> true_exit_bb<span class="op">);</span></span>
 <span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>false_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt2<span class="op">,</span> false_bb<span class="op">);</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>false_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt2<span class="op">,</span> sym_table<span class="op">,</span> false_bb<span class="op">);</span></span>
 <span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>create_jmp<span class="op">(</span>exit_bb<span class="op">,</span> false_exit_bb<span class="op">);</span></span>
 <span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> exit_bb<span class="op">;</span></span></code></pre></div></td>
@@ -654,7 +778,7 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>cond_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> current_bb<span class="op">);</span></span>
 <span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>create_branch<span class="op">(</span>cond<span class="op">,</span> body_bb<span class="op">,</span> exit_bb<span class="op">,</span> entry_bb<span class="op">);</span></span>
 <span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>body_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> body_bb<span class="op">);</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>body_exit_bb <span class="op">=</span> translate_stmt<span class="op">(</span>Stmt<span class="op">,</span> sym_table<span class="op">,</span> body_bb<span class="op">);</span></span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>create_jump<span class="op">(</span>entry_bb<span class="op">,</span> body_exit_bb<span class="op">);</span></span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> exit_bb<span class="op">;</span></span></code></pre></div></td>
@@ -708,5 +832,16 @@ $ accipit examples/factorial.acc
 
 在实现 lexer 和 parser 的基础上，将语法树转换为中间代码，具体来说：
 
-- 实现符号表管理。
+- 实现符号表 `sym_table` 管理。
 - 实现翻译函数 `translate_expr` 和 `translate_stmt` 的功能。
+
+## 实验提交
+
+实验三和实验四统一提交一次. 你需要提供:
+
+1. 源程序的压缩包. 
+2. 一份 PDF 格式的实验报告, 内容包括:
+
+    - 你的程序实现了哪些功能? 简要说明如何实现这些功能.
+    - 你的程序应该如何被编译? 请详细说明应该如何编译你的程序. 无法顺利编译将导致助教无法对你的程序所实现的功能进行任何测试, 从而丢失相应的分数.
+    - 实验报告的长度不得超过 6 页. 所以实验报告中需要重点描述的是你的程序中的亮点, 是你认为最个性化/最具独创性的内容, 尤其要避免大段地向报告里贴代码.
