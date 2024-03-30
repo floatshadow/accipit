@@ -5,6 +5,7 @@ repo_name: accsys/accipit
 theme:
   name: 'material'
   language: 'zh'
+  favicon: images/accsys.png
   features:
     - content.code.annotate
     - content.code.copy
