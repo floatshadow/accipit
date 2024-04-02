@@ -18,7 +18,16 @@ int main() {
 		if (func() == 1)
 			result = result + 1;
 		i = i + 1;
+		putint(i);
+		int i = 10;
+		putint(i);
 	}
+
+	{
+		int result = 10;
+		putint(result);
+	}
+	
 	if (result < 100)
 		putint(1);
 	else
