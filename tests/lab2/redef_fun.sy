@@ -1,6 +1,6 @@
 // Semantic Error: redefinition of function f
 
 void f() { return; }
-void f() { return; }
+void f(int a) { return; }
 
 int main() { return 0; }

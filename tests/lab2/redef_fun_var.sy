@@ -1,0 +1,6 @@
+// Semantic Error: redefinition of f
+
+void f() { return; }
+int f;
+
+int main() { return 0; }

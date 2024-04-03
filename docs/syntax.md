@@ -5,7 +5,7 @@
 
 ## 词法分析
 
-词法分析的目的是将源代码(一个个字符)解析成一个个token. Token 就是词法分析的最小单元, 表示一个程序有意义的最小分割. 下表为常见的token类型和样例:
+词法分析的目的是将源代码 (一个个字符) 解析成一个个 token. Token 就是词法分析的最小单元, 表示一个程序有意义的最小分割. 下表为常见的 token 类型和样例:
 
 | 类型  | 样例                       |
 |-----|--------------------------|
@@ -23,14 +23,14 @@ x = a + b * 2;
 上面的简单代码会被解析为:
 `[(identifier, x), (operator, =), (identifier, a), (operator, +), (identifier, b), (operator, *), (literal, 2), (separator, ;)]`.
 
-词法分析并不复杂, 本质上就是一个有限状态机([正则文法](https://en.wikipedia.org/wiki/Regular_expression))的匹配. 只需要简单的遍历源代码中的字符, 根据字符的值分别判断即可.
+词法分析并不复杂, 本质上就是一个有限状态机 ([正则文法](https://en.wikipedia.org/wiki/Regular_expression)) 的匹配. 只需要简单的遍历源代码中的字符, 根据字符的值分别判断即可.
 
 ## 语法分析
 
-由词法分析得到的一个个token在语法分析阶段进行进一步的解析. 具体来说, 需要:
+由词法分析得到的一个个 token 在语法分析阶段进行进一步的解析. 具体来说, 需要:
 
-1. 对于一串合法的tokens, 生成语法树.
-2. 对于的一串**不合法**的token, 检测到可能的错误并报告给用户.
+1. 对于一串合法的 tokens, 生成语法树.
+2. 对于的一串**不合法**的 token, 检测到可能的错误并报告给用户.
 
 如果说词法分析由[正则文法](https://en.wikipedia.org/wiki/Regular_expression)为基础, 语法分析则以[上下文无关文法](https://en.wikipedia.org/wiki/Context-free_grammar)作为基石. 
 
@@ -38,7 +38,13 @@ x = a + b * 2;
 
 ## 你的任务
 
-你需要完成编译器的词法分析和语法分析部分, 能够解析出符合词法与语法的 SysY 语言源代码, 并且我们**强烈建议**你实现一个打印语法树的函数, 以便于后续调试. 以如下的阶乘函数为例
+你需要完成编译器的词法分析和语法分析部分, 能够解析出符合词法与语法的 SysY 语言源代码.
+
+我们给出了一个使用 rust 编写的样例 [parser](https://git.zju.edu.cn/accsys/accsys-rs), 它足以通过 Lab 1 的测试. 同时我们提供了一份 CMake 的[项目模板](https://git.zju.edu.cn/accsys/accsys-cmake-template), 里面引入了 `fmt` 库, 并以上述实现建议中 C++ 的第二种写法实现了一个简单的表达式 parser (这种风格更接近 LLVM, 你会在 Lab 3 中再次见到它).
+
+当然我们不要求你必须使用这个模板, 你可以自行编写构建系统 (make/xmake/cargo/dune) 但要在报告中注明构建方法. 上面所说的所有工具和风格仅作推荐, 你不必受此约束. 
+
+我们建议你实现一个打印语法树的函数, 以便于后续调试. 以如下的阶乘函数为例
 ```c
 int factorial(int n) {
     if (n == 0)
@@ -138,21 +144,7 @@ int main(){
 
 我们的测试完全采用输入输出形式, 即对于符合语法的源代码, 你的程序正常运行后正常退出, 对于不符合语法的源代码, 你的程序应该能够检测出错误报错后返回非0值, 我们对报错的格式没有要求. 测试文件中的注释供你参考. 
 
-???tip "关于 Parser"
-    
-    由于我们的测试只针对输入输出, 你完全可以不使用 Flex 和 Bison 而去使用 ANTLR 等工具. Bison/Yacc/ANTLR 这类工具一般被称为 Parser Generator, 他们接受一系列文法定义然后生成一个 parser (更确切的说 Bison 生成的是 parser 的源码, 这样甚至不需要有任何额外的依赖). 
 
-    你也可以自己尝试写一个词法分析器和基于递归下降的语法分析器. 这件事并不像你想象的那样困难, 我们推荐 [crafting interpreter](https://craftinginterpreters.com/contents.html) 中语法分析内容供你参考. 
-
-    如果你想尝试手写递归下降或者想尝试 Parser Generator 之外的语法分析手段, 助教推荐一种叫 Parser Combinator 的范式. 一般 Parser Combinator 库会提供一些简单的 parser (比如说"吃掉一个固定的字符串", 你在手写递归下降的时候也会用到) 并提供组合他们的方法 (也就是 combinator, 比如说串联/选择). 所以本质上 Parser Combinator 是一种编写递归下降 parser 的工具.
-
-    也许课上讲的顺序是从递归下降分析过渡到 LL(k) 预测分析的, 你可能会觉得递归下降 parser 识别的语言是 LL(k) 识别的语言的子集, 但是实际上允许回溯的递归下降 parser 是更强的. 我们用 [Parsing Expression Grammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar) (PEG) 来形式化描述递归下降 parser, 正如 CFG 可以对应 Pushdown Automaton.
-
-    PEG 的神奇之处在于, 它可以识别一些非 CFG 语言, 比如 $a^n b^n c^n$ (也许你在计算理论里见过如何通过 pumping lemma 证明这个语言不是 CFL). 但这并不意味着 PEG 比 CFG 强, 首先你在实际使用的时候仍然需要考虑左递归的问题, 其次有一些 CFL 难以用 PEG 识别, 比如说回文串. 目前是否存在一个无法被 PEG 识别的 CFL 仍然是一个 open problem. 
-
-    你可以在[这个项目](https://git.zju.edu.cn/accsys/peg-test)里看到一个 PEG parser 是如何识别 $a^n b^n c^n$ 的, 以及为什么它难以识别回文串(项目里的写法实际上只能识别一个长度为 3 的回文前缀, 这和 PEG 的确定性有关).
-
-    我们的 [IR 工具](https://git.zju.edu.cn/accsys/accipit)和[样例编译器](https://git.zju.edu.cn/accsys/accsys-rs)使用了 Rust 的 Parser Combinator 库 [chumsky](https://github.com/zesterer/chumsky) 和 [nom](https://github.com/rust-bakery/nom), 他们都支持回溯功能, 所以可以识别任何 PEG, 也即可以生成(带回溯的)递归下降 parser.
 
 ## 实验提交
 
@@ -168,6 +160,22 @@ int main(){
 > 建议使用 Git 管理你的代码
 
 ## 实现建议
+
+!!!tip "关于 Parser"
+    
+    由于我们的测试只针对输入输出, 你完全可以不使用 Flex 和 Bison 而去使用 ANTLR 等工具. Bison/Yacc/ANTLR 这类工具一般被称为 Parser Generator, 他们接受一系列文法定义然后生成一个 parser (更确切的说 Bison 生成的是 parser 的源码, 这样甚至不需要有任何额外的依赖). 
+
+    你也可以自己尝试写一个词法分析器和基于递归下降的语法分析器. 这件事并不像你想象的那样困难, 我们推荐 [crafting interpreter](https://craftinginterpreters.com/contents.html) 中语法分析内容供你参考. 
+
+    如果你想尝试手写递归下降或者想尝试 Parser Generator 之外的语法分析手段, 助教推荐一种叫 Parser Combinator 的范式. 一般 Parser Combinator 库会提供一些简单的 parser (比如说"吃掉一个固定的字符串", 你在手写递归下降的时候也会用到) 并提供组合他们的方法 (也就是 combinator, 比如说串联/选择). 所以本质上 Parser Combinator 是一种编写递归下降 parser 的工具.
+
+    也许课上讲的顺序是从递归下降分析过渡到 LL(k) 预测分析的, 你可能会觉得递归下降 parser 识别的语言是 LL(k) 识别的语言的子集, 但是实际上允许回溯的递归下降 parser 是更强的. 我们用 [Parsing Expression Grammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar) (PEG) 来形式化描述递归下降 parser, 正如 CFG 可以对应 Pushdown Automaton.
+
+    PEG 的神奇之处在于, 它可以识别一些非 CFG 语言, 比如 $a^n b^n c^n$ (也许你在计算理论里见过如何通过 pumping lemma 证明这个语言不是 CFL). 但这并不意味着 PEG 比 CFG 强, 首先你在实际使用的时候仍然需要考虑左递归的问题, 其次有一些 CFL 难以用 PEG 识别, 比如说回文串. 目前是否存在一个无法被 PEG 识别的 CFL 仍然是一个 open problem. 
+
+    你可以在[这个项目](https://git.zju.edu.cn/accsys/peg-test)里看到一个 PEG parser 是如何识别 $a^n b^n c^n$ 的, 以及为什么它难以识别回文串(项目里的写法实际上只能识别一个长度为 3 的回文前缀, 这和 PEG 的确定性有关).
+
+    我们的 [IR 工具](https://git.zju.edu.cn/accsys/accipit)和[样例编译器](https://git.zju.edu.cn/accsys/accsys-rs)使用了 Rust 的 Parser Combinator 库 [chumsky](https://github.com/zesterer/chumsky) 和 [nom](https://github.com/rust-bakery/nom), 他们都支持回溯功能, 所以可以识别任何 PEG, 也即可以生成(带回溯的)递归下降 parser.
 
 !!!tip "AST表示与打印"
     AST 是编译器的核心数据结构之一, 在尝试使用不同编程语言时会有不同的技术方案, 我们以 `Stmt` 为例, 介绍在 C, C++, Rust 中表示语法树这类数据结构的一种方法. 
@@ -333,6 +341,4 @@ int main(){
         
         当然如果你足够热爱 C++ 或者足够痛恨 Rust 还想用这套的话也不是不行, 这里给出一个基于 `std::variant` 和 `std::visit` 的[实现](https://gcc.godbolt.org/z/jKMacTW37) (这个方法来自于 [cppreference](https://en.cppreference.com/w/cpp/utility/variant/visit)). 这就是 Modern C++.
 
-我们给出了一个使用 rust 编写的样例 [parser](https://git.zju.edu.cn/accsys/accsys-rs), 它足以通过 Lab 1 的测试. 同时我们提供了一份 CMake 的[项目模板](https://git.zju.edu.cn/accsys/accsys-cmake-template), 里面引入了 `fmt` 库, 并以上述实现建议中 C++ 的第二种写法实现了一个简单的表达式 parser (这种风格更接近 LLVM, 你会在 Lab 3 中再次见到它).
 
-当然我们不要求你必须使用这个模板, 你可以自行编写构建系统 (make/xmake/cargo/dune) 但要在报告中注明构建方法. 上面所说的所有工具和风格仅作推荐, 你不必受此约束. 

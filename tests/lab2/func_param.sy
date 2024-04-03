@@ -1,0 +1,11 @@
+int f(int a[][10]) {
+  return 10;
+}
+
+int main() {
+  int a[10][10];
+  int b[10][10][10];
+  f(a);
+  f(b[0]);
+  return 0;
+}

@@ -1,4 +1,4 @@
-<div align="center">
+<div style="width: 50%; margin: 0 auto;">
   <img src="docs/images/accipit.jpg">
 </div>
 
