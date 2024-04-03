@@ -164,14 +164,14 @@ let %3 = store 1, %0
 let %4 = store 2, %1
 let %5 = store 0, %2
 // result = lhs + rhs
-let %6 = load %lhs.addr
-let %7 = load %rhs.addr
+let %6 = load %0
+let %7 = load %1
 let %8 = add %3, %4
-let %9 = store %8, %result.addr
+let %9 = store %8, %2
 // result = result + 1
-let %10 = load %result.addr
+let %10 = load %2
 let %11 = add %10, 1
-let %12 = store %11, %result.addr
+let %12 = store %11, %2
 ```
 
 
