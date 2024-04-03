@@ -1,5 +1,3 @@
-// Semantic Error: redefinition of f
-
 void f() { return; }
 int f;
 
