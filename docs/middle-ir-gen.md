@@ -5,28 +5,33 @@
 
 正如课上可能提到过的，如果没有中间表示 (Intermediate Representation，简称 IR)，n 门语言 m 种硬件平台各自写编译器，就可能需要 n * m 种编译器，但是 n 门语言的前端编译到一个统一的 IR 然后再由 IR 编译到不同的后端，这样只需要 n + m 个“编译器”.
 
-但是，IR 的作用并不仅限于减少编译器开发的工作量，在现代编译器架构下，具体体现在 IR 所指代的对象宽泛化了，现在 IR 通常可以用于泛指“源代码”与“目标平台汇编”之间的各种表示形式，例如抽象语法树、目标无关的中间代码、三地址码风格的类机器代码层等：
+但是，IR 的作用并不仅限于减少编译器开发的工作量，在现代编译器架构下，具体体现在 IR 所指代的对象宽泛化了，现在 IR 通常可以用于泛指“源代码”与“目标平台汇编”之间的各种表示形式，例如抽象语法树、目标无关的中间代码、三地址码风格的类机器代码层等，从中间代码所在的编译器层级来看：
 
-- 抽象语法树 AST，树形结构，贴近源代码层，适合做语法糖的展开、构建符号表、类型检查等靠近编程语言的高层级抽象的任务.
+- **抽象语法树 AST（高层 IR）**：树形结构，贴近源代码层，适合做语法糖的展开、构建符号表、类型检查等靠近编程语言的高层级抽象的任务.
 它们和程序语言的设计风格息息相关，因此能够做一些更抽象、更高级的优化.
 例如，AST 层级仍然保留结构化控制流（例如 while loop, for loop, if, switch，函数式风格的可能有 parallel, reduce, yield 等）信息，模式匹配 (pattern match) 就可以被展开为一棵高效的决策树 (decison tree)，减少多余的比较和跳转.
-- 目标无关的中间代码（**我们在这里**），常见的设计是线性指令.
+- **目标无关的中间代码（中层 IR）**：本实验讨论的部分. 常见的设计是线性指令.
 由于是平台无关的，设计上通常会考虑屏蔽底层细节；由于考虑适配多语言前端的需要，抛弃了多数高层级信息，更为贴合底层汇编.
 例如 LLVM IR 在形式上就非常类似 RISC 汇编，但是仍然有 GEP 这样的高级指令.
 在这一层级，通常只剩下了非结构化控制流（例如无条件跳转 jump，分支跳转 branch 等），进行例如常量传播、公共子表达式折叠、不变式归纳等与硬件细节无关的优化，以及控制流分析、数据流分析、别名分析等普适的分析.
-- 三地址码风格的类机器代码层，形式上非常接近汇编，甚至可以直接按照汇编指令的格式设计.
+- **三地址码或四元组风格的类机器代码层（低层 IR）**，形式上非常接近汇编，甚至可以直接按照汇编指令的格式设计.
 这一层非常靠近硬件，优化需要考虑不同指令的延迟、吞吐量、流水线、ABI 等，许多问题是 NP-Hard 的.
 
 我们可以看到，实际上每一层“中间表示”都有各自的特点，依次从高抽象走向低级，适合做的任务也不同，每一层都是一个小型的“编译系统”，因此现代编译器通常会采用多层 IR.
+此外，由于涉及的任务不同，不同层的 IR 所使用的数据结构也有所不同：
 
-例如 Rust 就曾经在前端增加了一层 [MIR](https://blog.rust-lang.org/2016/04/19/MIR.html)，borrow checker 就在 MIR 层上进行分析：
+- **树或者图结构**：使用图（graph）来表示程序的信息，用节点表示程序里的对象，用边表示关系，此类结构一般能详尽准确地描述程序内的各类信息. 抽象语法树（AST）是一种典型的树形 IR.
+- **线型结构**：例如我们经常使用的 C 语言、汇编语言中语句和语句之间就是线型关系。你可以将这种中间代码看成是某种抽象计算机的一个简单的指令集。
+- **混合型**：混合了图和线性两种中间代码风格，例如本实验所使用的 Accipit IR. Accipit IR 将代码组织成许多基本块，块内部采用线型表示，块与块之间采用图表示.
+
+Rust 就曾经在前端增加了一层图结构 [MIR](https://blog.rust-lang.org/2016/04/19/MIR.html)，borrow checker 就在 MIR 层上进行分析：
 
 ![Introducing MIR](images/flow.svg)
 
 
 ## 中间代码的定义
 
-本实验的 IR 是类似 LLVM IR 的 partial SSA 形式，即利用 `alloca` `load` `store` 三条指令在 SSA 形式上“开洞”，具体的规范请参阅[Accipit IR 规范](appendix/accipit-spec.md).
+本实验的 IR 是类似 LLVM IR 的 partial SSA 形式，即利用 `alloca` `load` `store` 三条指令在 SSA 形式上“开洞”，具体的规范请参阅 [Accipit IR 规范](appendix/accipit-spec.md).
 我们在附录还提供了一些样例：[SysY 结构与 Accipit IR 的对应](appendix/sysy-accipit-mapping.md)，为你演示如何从 SysY 前端的高层级结构翻译到 Accipit IR。
 
 下面这段阶乘的样例代码能帮助你实现一个功能正确（虽然显然欠优化的）的中端代码.
@@ -54,7 +59,7 @@ fn %factorial(#n: i32) -> i32 {
     let %ret.addr = alloca i32, 1
     // store function parameter on the stack.
     let %n.addr = alloca i32, 1
-    let %4: () = store #n, %n.addr
+    let %4 = store #n, %n.addr
     // create a slot for local variable ans, uninitialized.
     let %ans.addr = alloca i32, 1
     // when we need #n, you just read it from %n.addr.
@@ -127,13 +132,38 @@ $ dot -Tpng -o file.png .file.dot
 
 ## 语法制导代码生成
 
-下一步我们就要把经过语义检查和推断的语法树转换成中间代码.
-基本思路是遍历语法树的节点，然后根据节点的类型生成对应的中间代码.
-其核心和语义分析类似，我们要实现一个 translate_X 函数，X 对应表达式，语句等等.
+下一步我们就要把经过语义检查语法树转换成 Accipit 中间代码.
+首先，简要回顾 Accipit IR 的结构，详细请看 [Accipit IR 规范](appendix/accipit-spec.md)：
+
+- **Type（类型）**：包括基本类型 `i32` `()` 以及指针类型、函数类型.
+- **Instruction（指令）**：指令分为 value binding 和 terminator 两类，前者主要进行数据操作，后者主要进行控制流操作.
+- **Value（值）**：值包含 value binding 的指令所定义的变量和常量.
+- **BasicBlock（基本块）**：基本块包含若干线性排列的指令序列，其中最后一条指令必须是 terminator. 基本块内部的指令序列线性排列，线性执行（线性结构）；基本块之间的跳转构成图结构，表示控制流的跳转（图结构）.
+- **Function（函数）**：函数的名称，类型等.
+- **Module(模块)**：表示整个编译单元，包含函数和全局变量等.
+
+以及再次重申这条重要原则：
+
+!!! warning "注意"
+    出于某种神秘的原因，我们规定每个变量只能在定义的时候被赋值一次. 也就是说，每条 value binding 类型的指令的定义的变量，在对应的作用域内要求是**唯一**的，至于为什么，你可以参考[附录：从四元组到静态单赋值形式](quads2ssa.md).
+    所以，我们在语法上用 `let` 来暗示这一点.
+    有一些相应的翻译技巧处理源代码出现多次赋值的情况，详细请看[附录：SysY 结构与 Accipit IR 的对应](sysy-accipit-mapping.md)
+
+翻译的基本思路是遍历语法树的节点，然后根据节点的类型生成对应的中间代码.
+整个翻译的最大矛盾在于前端树结构的语法树和后端线性的汇编之间的差异，本实验的核心哲学便在于中间代码如何连接这两种迥异的代码表示形式：
+
+- **数据流（Data Flow）**：语法树只记录了变量的名字而且可能有重名变量，而汇编的只能操作有限的物理寄存器. 中间代码需要理清表达式所使用的变量的数据来源，从而能够最终映射到寄存器操作上.
+- **控制流（Control Flow）**：语法树语句块是结构化的、嵌套的树形结构，并没有显式的控制流跳转；汇编是线型的，需要给不同的子语句块标记 label，并加上合适的跳转指令. 中间代码需要理清不同语句块之间的控制流跳转关系.
+
+我们实现一个 translate_X 函数，X 对应表达式，语句等等.
+
+- `translate_expr` 将表达式翻译到中端 IR 的 value. 起到跟踪数据流，完成表达式翻译到线性的指令的任务.
+- `translate_stmt` 将语句块翻译到中端 IR 的 basicblock.
+你需要跟踪控制流，将语句块之间的关系翻译到控制流跳转任务，插入合适的 terminator 指令.
 
 ### 表达式生成
 
-正如前面所述，每条指令实际上定义了一个新的变量，因此可以使用指令本身来表示变量，在 Accipit IR 中，值 (value) 包括变量和常数.
+在 Accipit IR 中，值 (value) 包括变量和常数.
 
 我们先定义 `Value` 类型，并给出一些可供参考的实现方式：
 
@@ -419,7 +449,6 @@ $ dot -Tpng -o file.png .file.dot
 translate_expr(expr, symbol_table, current_bb) -> value
 ```
 
-`translate_expr` 将表达式翻译到中端 IR 的 value.
 其中 `symbol_table` 是符号表，维护一个 `string -> value` 的映射，虽然在类似 SSA 的形式下，变量的名字并不重要，但是在处理局部变量时，我们要每个局部变量分配一个栈上的地址，为此我们需要记录变量名字到对应 alloca 指令的映射.
 对于重复命名的变量，如在一个语句块里定义的变量和外层的变量重名时，请你自行处理.
 
@@ -429,7 +458,7 @@ translate_expr(expr, symbol_table, current_bb) -> value
 
 ```plaintext
 lhs_value = translate_expr(expr1, sym_table, current_bb)
-rhs_value = translate_expr(expr2, sym_table, cuurent_bb)
+rhs_value = translate_expr(expr2, sym_table, current_bb)
 result_value = create_binary(lhs, rhs, current_bb)
 return result_value
 ```
@@ -652,9 +681,11 @@ void insert_instruction(Instruction *inst, BasicBlock *block) {
 ```
 
 ??? tip "数据结构对 IR 的影响"
-    使用类似数组的数据结构存放指令序列，能够提高 cache 的命中率，这样我们遍历指令就会很快，而且实现足够简单，足够你完成本课程的实验.
-    但是，如果你考虑进行中端的目标无关代码优化，那么你需要频繁地删除某些指令，在中间插入某些指令，或者将几条指令替换成更高效的指令，而双端链表相比数组更容易实现上面这些操作，因此 LLVM 中使用双端链表来存放指令序列——甚至是基本块序列.
-    不过，双端链表的访问效率不如数组，这一点在 JIT 编译器中变成了减分项，例如 WebKit B3 JIT compiler 就将后端模块中原来的 LLVM IR 换成了新的 B3 IR，B3 IR 就使用数组存储，为了满足在 B3 IR 层级上进行代码优化的需要，编译器引入了一个 `InsertionSet` 数据结构.
+    使用类似数组的数据结构存放指令序列，能够提高 cache 的命中率，这样遍历指令就会很快.这种实现足够简单，也足够你完成本课程的实验的基础部分了.
+
+    但是，如果进行中端的目标无关代码优化，那么需要频繁地删除某些指令，在中间插入某些指令，或者将几条指令替换成更高效的指令，而双端链表相比数组更容易实现上面这些操作. 因此 LLVM 中使用双端链表来存放指令序列——甚至是基本块序列.
+
+    即便如此，双端链表的访问效率仍然是个问题，这在 JIT 编译器中是一个减分项. 为此， WebKit B3 JIT compiler 就将后端模块中原来的 LLVM IR 换成了新的 B3 IR，B3 IR 就使用数组存储，为了满足在 B3 IR 层级上进行代码优化的需要，编译器引入了一个 `InsertionSet` 数据结构.
     它记录优化 Pass 中所有的变化，并在最后进行统一插入更新，以提高效率.
     如果你对此感兴趣，可以阅读 [WebKit Blog](https://webkit.org/blog/5852/introducing-the-b3-jit-compiler/)
 
@@ -666,13 +697,8 @@ void insert_instruction(Instruction *inst, BasicBlock *block) {
 translate_stmt(stmt, symbol_table, current_bb) -> exit_bb
 ```
 
-局部变量（包括函数参数）声明语句需要翻译成 `alloca` 指令，用来将它们放在栈空间上.
-首先你需要注意，所有的 `alloca` 指令都应该放在整个函数开头的入口基本块内，而不是局部变量声明出现的那个语句块对应的基本块.
-`alloca` 指令的作用域是整个函数，如果你“原地翻译”，那么可以想象一下 While 循环内声明一个局部变量——每次循环都分配栈空间，循环次数一多就爆栈了——但其实我们只需要为这个变量分配一次栈空间即可.
-其次，正如上文 `translate_expr` 提到的，你需要即时更新符号表 `sym_table`.
-
-由于语句块可能包含控制流的跳转，而且整个语句块整体并没有产生 Value，我们考虑 `translate_stmt` 接受一个基本块参数 `current_bb`，表示当前控制流在 `current_bb` 所表示的基本块处；返回一个基本块 `exit_bb`，表示参数 `stmt` 翻译结束后，控制流将在 `exit_bb` 所表示的基本块处基本块继续.
-在出现控制流嵌套（例如 if 套 if ）的情况下可能更方便你的处理。
+由于语句块可能包含控制流的跳转，而且整个语句块整体并没有产生 value，我们考虑 `translate_stmt` 接受一个基本块参数 `current_bb`，表示当前控制流在 `current_bb` 所表示的基本块处；返回一个基本块 `exit_bb`，表示参数 `stmt` 翻译结束后，控制流将在 `exit_bb` 所表示的基本块处基本块继续.
+在出现控制流嵌套（例如 If 套 If ）的情况下可能更方便你的处理。
 
 条件语句的生成则要复杂些，我们所定义的基本块结构中间在这里将发挥重要作用.
 直觉上来说，If 语句应该生成如下的中间代码：
@@ -810,6 +836,11 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1
 </tbody>
 </table>
 
+局部变量（包括函数参数）声明语句需要翻译成 `alloca` 指令，用来将它们放在栈空间上.
+你需要注意，所有的 `alloca` 指令都应该放在整个函数开头的入口基本块内，而不是局部变量声明出现的那个语句块对应的基本块.
+`alloca` 指令的作用域是整个函数，如果你“原地翻译”，那么可以想象一下 While 循环内声明一个局部变量——每次循环都分配栈空间，循环次数一多就爆栈了——这个变量被反复分配了新的栈空间.
+其次，正如上文 `translate_expr` 提到的，你需要即时更新符号表 `sym_table`.
+
 ## 解释器
 
 为了检测生成的中间代码生成正确性和评测，我们为大家提供了一个该中间表示的解释器。
@@ -854,10 +885,11 @@ $ accipit examples/factorial.acc
 
 ## 你的任务
 
-在实现 lexer 和 parser 的基础上，将语法树转换为中间代码，具体来说：
+在实现 lexer 和 parser 的基础上，将语法树转换为中间代码，概要地说：
 
-- 实现符号表 `sym_table` 管理。
-- 实现翻译函数 `translate_expr` 和 `translate_stmt` 的功能。
+- 从前端 SysY 的类型翻译到 Accipit IR 的类型. Accipit IR 是一个“强类型”的中间表示，且和前端 SysY 的类型有所区别.
+- 实现符号表 `sym_table` 管理，需要注意此处的符号表和语义分析的任务不同.
+- 实现翻译函数 `translate_expr` 和 `translate_stmt` 的功能，即从前端的一棵 `Node` 类型的语法树，转换到 `Module`-`Function`-`BasicBlock`-`Instruction` 的 Accipit IR 层级结构.
 
 ## 实验提交
 
