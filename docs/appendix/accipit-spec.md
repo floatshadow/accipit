@@ -56,27 +56,27 @@ ident 定义了标识符 (identifier) 集合，你可以理解为 Accipit IR 内
 - 匿名的变量或者临时变量，通常按出现的顺序使用一个非负整数命名，例如 `%12` `@2` `%0`.
 
 ```
-int_lit    ::=  '-'? <digit>+
-none_lit   ::=  'none'
-unit_lit   ::=  'unit'
-lit        ::=  <int_lit> | <none_lit> | <unit_lit>
+int_const    ::=  '-'? <digit>+
+none_const   ::=  'none'
+unit_const   ::=  'unit'
+const        ::=  <int_const> | <none_const> | <unit_const>
 ```
 
 除了可以用上述具名或匿名的标识符来引用某个值，Accipit IR 还有常数值.
 
-`int_lit` 定义了 32 位有符号整数字面量，我们只考虑普通的十进制整数的文本形式.
+`int_lit` 定义了 32 位有符号整数常数，我们只考虑普通的十进制整数的文本形式.
 
-`none_lit` 是两个特殊的符号，用于 offset 指令.
+`none_lit` 是一个特殊的常数，用于 offset 指令（见下）.
 
-`unit_lit` 是单值类型 unit 的字面量常数.
+`unit_lit` 是单值类型 unit 的常数.
 
 ```
 symbol     ::= <ident>
-value      ::= <symbol> | lit<>
+value      ::= <symbol> | <const>
 ```
 
 符号 (symbol) 包含所有标识符，代表了中间代码中的变量，包括带有名称的和匿名的临时变量.
-而 IR 中合法的值 (value) 既可以是符号，表示对应变量的值；也可以是字面量，表示字面量本身的值.
+而 IR 中合法的值 (value) 既可以是符号，表示对应变量的值；也可以是常数，表示常数本身的值.
 
 ## Structures
 

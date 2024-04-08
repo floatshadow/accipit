@@ -136,11 +136,11 @@ $ dot -Tpng -o file.png .file.dot
 首先，简要回顾 Accipit IR 的结构，详细请看 [Accipit IR 规范](appendix/accipit-spec.md)：
 
 - **Type（类型）**：包括基本类型 `i32` `()` 以及指针类型、函数类型.
-- **Instruction（指令）**：指令分为 value binding 和 terminator 两类，前者主要进行数据操作，后者主要进行控制流操作.
-- **Value（值）**：值包含 value binding 的指令所定义的变量和常量.
+- **Instruction（指令）**：指令分为 value binding 和 terminator 两类. 前者主要进行数据操作，有 `let` 开头，定义一个新变量；后者主要进行控制流操作，如无条件跳转和条件跳转等.
+- **Value（值）**：值包含指令所定义的符号 `symbol` 和常量 `const` 两类.
 - **BasicBlock（基本块）**：基本块包含若干线性排列的指令序列，其中最后一条指令必须是 terminator. 基本块内部的指令序列线性排列，线性执行（线性结构）；基本块之间的跳转构成图结构，表示控制流的跳转（图结构）.
 - **Function（函数）**：函数的名称，类型等.
-- **Module(模块)**：表示整个编译单元，包含函数和全局变量等.
+- **Module（模块）**：表示整个编译单元，包含函数和全局变量等.
 
 以及再次重申这条重要原则：
 
@@ -152,7 +152,7 @@ $ dot -Tpng -o file.png .file.dot
 翻译的基本思路是遍历语法树的节点，然后根据节点的类型生成对应的中间代码.
 整个翻译的最大矛盾在于前端树结构的语法树和后端线性的汇编之间的差异，本实验的核心哲学便在于中间代码如何连接这两种迥异的代码表示形式：
 
-- **数据流（Data Flow）**：语法树只记录了变量的名字而且可能有重名变量，而汇编的只能操作有限的物理寄存器. 中间代码需要理清表达式所使用的变量的数据来源，从而能够最终映射到寄存器操作上.
+- **数据流（Data Flow）**：语法树只记录了变量的名字而且可能有重名变量，而汇编的只能操作有限的物理寄存器. 中间代码需要理清表达式所使用的变量的数据来源，从而能够最终映射到寄存器操作上. Accipit IR 规范中的 value 一定程度上表征了“数据”，即符号或常量.
 - **控制流（Control Flow）**：语法树语句块是结构化的、嵌套的树形结构，并没有显式的控制流跳转；汇编是线型的，需要给不同的子语句块标记 label，并加上合适的跳转指令. 中间代码需要理清不同语句块之间的控制流跳转关系.
 
 我们实现一个 translate_X 函数，X 对应表达式，语句等等.
@@ -459,7 +459,7 @@ translate_expr(expr, symbol_table, current_bb) -> value
 ```plaintext
 lhs_value = translate_expr(expr1, sym_table, current_bb)
 rhs_value = translate_expr(expr2, sym_table, current_bb)
-result_value = create_binary(lhs, rhs, current_bb)
+result_value = create_binary(addop, lhs, rhs, current_bb)
 return result_value
 ```
 
@@ -681,7 +681,8 @@ void insert_instruction(Instruction *inst, BasicBlock *block) {
 ```
 
 ??? tip "数据结构对 IR 的影响"
-    使用类似数组的数据结构存放指令序列，能够提高 cache 的命中率，这样遍历指令就会很快.这种实现足够简单，也足够你完成本课程的实验的基础部分了.
+    使用类似数组的数据结构存放指令序列，能够提高 cache 的命中率，这样遍历指令就会很快.
+    这种实现足够简单，也足够你完成本课程的实验的基础部分了.
 
     但是，如果进行中端的目标无关代码优化，那么需要频繁地删除某些指令，在中间插入某些指令，或者将几条指令替换成更高效的指令，而双端链表相比数组更容易实现上面这些操作. 因此 LLVM 中使用双端链表来存放指令序列——甚至是基本块序列.
 
@@ -891,13 +892,8 @@ $ accipit examples/factorial.acc
 - 实现符号表 `sym_table` 管理，需要注意此处的符号表和语义分析的任务不同.
 - 实现翻译函数 `translate_expr` 和 `translate_stmt` 的功能，即从前端的一棵 `Node` 类型的语法树，转换到 `Module`-`Function`-`BasicBlock`-`Instruction` 的 Accipit IR 层级结构.
 
-## 实验提交
+## C++ 模板代码说明
 
-实验三和实验四统一提交一次. 你需要提供:
+出于实现上的方便，方便维护 use-def chain，类继承关系如下图所示：
 
-1. 源程序的压缩包. 
-2. 一份 PDF 格式的实验报告, 内容包括:
-
-    - 你的程序实现了哪些功能? 简要说明如何实现这些功能.
-    - 你的程序应该如何被编译? 请详细说明应该如何编译你的程序. 无法顺利编译将导致助教无法对你的程序所实现的功能进行任何测试, 从而丢失相应的分数.
-    - 实验报告的长度不得超过 6 页. 所以实验报告中需要重点描述的是你的程序中的亮点, 是你认为最个性化/最具独创性的内容, 尤其要避免大段地向报告里贴代码.
+![impl-value-instruction](images/impl-value-instruction.svg)
