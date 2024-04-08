@@ -454,23 +454,24 @@ translate_expr(expr, symbol_table, current_bb) -> value
 
 由于 `translate_expr` 只是翻译表达式，没有任何控制流转移，因此只会生成线性的指令流，因此考虑传入基本块信息 `current_bb`，表示当前控制流在 `current_bb` 这个基本块，翻译得到的指令序列应当插入此处.
 
-面对形如 `expr1 + expr2` 这样的二元表达式，我们递归调用两个子节点的 `translate_expr`，然后生成一条加法指令将他们加起来，最后 `result_value` 将作为 `translate_expr` 的返回值：
+面对形如 `expr1 + expr2` 这样的二元表达式（下文记作 `expr0`），调用 `translate_expr(expr0, sym_table, current_bb)` 进行翻译.
+我们递归调用两个子节点的 `translate_expr`，然后生成一条加法指令将他们加起来，最后 `result_value` 将作为最后的返回值：
 
 ```plaintext
 lhs_value = translate_expr(expr1, sym_table, current_bb)
 rhs_value = translate_expr(expr2, sym_table, current_bb)
-result_value = create_binary(addop, lhs, rhs, current_bb)
+result_value = create_binary(addop, lhs_value, rhs_value, current_bb)
 return result_value
 ```
 
-上面生成的指令在 IR 中看起来可能像这样，其中 `%2` 是 `translate_expr` 的返回值：
+上面生成的指令在 IR 中看起来可能像这样，其中 `%2` 是 `translate_expr(expr0, sym_table, current_bb)` 最后的返回值：
 
 ```rust
 // lhs value, anonymous
 let %0 = .....
 // rhs value, anonymous
 let %1 = .....
-/// result value
+/// result value, anonymous
 let %2 = add %0, %1
 ```
 
@@ -628,7 +629,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td><div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>binop <span class="op">=</span> get_binop<span class="op">(</span>BinOp<span class="op">);</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>expr1_value <span class="op">=</span> translate_expr<span class="op">(</span>expr1<span class="op">,</span> sym_table<span class="op">);</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>expr2_value <span class="op">=</span> translate_expr<span class="op">(</span>expr2<span class="op">,</span> sym_table<span class="op">);</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_binary<span class="op">(</span>binop<span class="op">,</span> expr1<span class="op">,</span> expr2<span class="op">,</span> current_bb<span class="op">);</span></span></code></pre></div></td>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_binary<span class="op">(</span>binop<span class="op">,</span> expr1_value<span class="op">,</span> expr2_value<span class="op">,</span> current_bb<span class="op">);</span></span></code></pre></div></td>
 </tr>
 <tr class="even">
 <td><code>MINUS Expr1</code></td>
