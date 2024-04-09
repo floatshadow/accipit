@@ -64,11 +64,11 @@ const        ::=  <int_const> | <none_const> | <unit_const>
 
 除了可以用上述具名或匿名的标识符来引用某个值，Accipit IR 还有常数值.
 
-`int_lit` 定义了 32 位有符号整数常数，我们只考虑普通的十进制整数的文本形式.
+`int_const` 定义了 32 位有符号整数常数，我们只考虑普通的十进制整数的文本形式.
 
-`none_lit` 是一个特殊的常数，用于 offset 指令（见下）.
+`none_const` 是一个特殊的常数，用于 offset 指令（见下）.
 
-`unit_lit` 是单值类型 unit 的常数.
+`unit_const` 是单值类型 unit 的常数.
 
 ```
 symbol     ::= <ident>
@@ -150,18 +150,37 @@ binexpr   ::=  <binop> <value> ',' <value>
 接受两个 i32 类型操作数，返回一个 i32 类型的值.
 
 
-#### Pointer Instructions
+#### Memory Instructions
 
 ```
-gep  ::=  'offset' <type> ',' <symbol> { ',' '[' <value> '<' {<int_lit> | <none_lit>} ']' }+
+alloca ::= 'alloca' <type> ',' <int_const>
+load   ::= 'load' <symbol>
+store  ::= 'store' <value> ',' <symbol> 
 ```
 
 ##### 说明
 
-offset 指令的语义比较复杂，它是用于计算地址偏移量的.
+alloca 指令的作用是为局部变量开辟栈空间，并获得一个指向 `<type>` 类型，长度为 `<int_const>` 的指针.
+可以理解为，在栈上定义一个数组 `<type>[<int_const>]`，并获取数组首元素的地址.
+或者类比 C 代码 `int *a = (int *)malloc(100 * sizeof(int))`， 对应 `let %a = alloca i32, 100`，只不过 alloca 分配的是栈空间，返回的是栈上的地址.
+
+load 指令接受一个指针类型 T* 的符号，返回一个 T 类型的值.
+
+store 指令接受一个类型 T 的值，将其存入一个 T* 类型的符号，并返回 unit 类型的值.
+
+
+#### Offset
+
+```
+gep  ::=  'offset' <type> ',' <symbol> { ',' '[' <value> '<' {<int_const> | <none_const>} ']' }+
+```
+
+##### 说明
+
+offset 指令的语义比较复杂，它是用于计算地址偏移量的，我们也可以将它归为 Memory Instructions.
 在大家比较熟悉的 C 语言中，可能涉及到高维数组、结构体等等寻址比较复杂的结构，这是 offset 尝试解决的问题.
 
-出于简化考虑，accipit IR 都使用普通的指针表示，并使用若干组 size 来标记每个维度上的大小，若干组 index 来标记每个维度上的偏移量：
+出于简化考虑，Accipit IR 都使用普通的指针类型表示一维数组和高维数组，数组上的偏移计算使用若干组 size 来标记每个维度上的大小，若干组 index 来标记每个维度上的偏移量：
 
 offset 指令有一个类型标注，用来表明数组中元素类型；
 一共有 `2n + 1` 个参数，其中第一个参数是一个指针，表示基地址；
@@ -169,14 +188,16 @@ offset 指令有一个类型标注，用来表明数组中元素类型；
 
 例如 C 语言中声明数组 `int g[3][2][5]`，访问元素 `g[x][y][z]` 时，对应的 offset 指令为 `offset i32, %g.addr, [x < 3], [y < 2], [z < 5]`.
 
-当然，可能会出现高位数组有一维不知道大小或者单个指针偏移的情况，在这种情况下，对应的维度使用 none 标记：
+当然，可能会出现高位数组有一维不知道大小或者在单个指针上算偏移的情况，在这种情况下，对应的维度使用 none 标记：
 
 - 二维数组 `int g[][5]` 访问 `g[x][y]`，`offset i32, %g.addr, [%x < none], [%y < 5]`. 其中 `%g.addr` 是数组首地址对应的 value，`%x` 和 `%y` 分别是数组下标 `x` 和 `y` 对应的 value.
 - 单个指针 `int *p` 访问 `p + 10`，`offset i32, %p, [10 < none]`. 其中，`%p` 是指针 `p` 对应的 value，`10` 是字面量 10 在对应的 value.
 
-为什么要有 size 这个参数作为一个下标的上界？
-为了你方便处理，我们在类型中舍弃了高维数组，因为数组类型在后端代码生成时处理相对比较麻烦，但是在前端处理这些信息相对容易.
-此外为了方便检查可能的下标越界错误，解释器需要 bound 信息标注.
+为什么要有 size 这个参数作为一个下标的上界：
+
+- **设计的取舍**：为了你方便处理，我们在类型中舍弃了高维数组，因为数组类型在后端代码生成时处理相对比较麻烦，但是在前端处理这些信息相对容易.
+- **平台无关**：固然可以在前端就计算出相对于基地址的偏移，但是这涉及到后端细节——类型在内存中的大小——不符合中间平台无关代码的初衷.
+- **错误检查**：方便解释器检查（运行时）下标越界错误.
 
 ##### 类型规则
 
@@ -204,23 +225,6 @@ fncall 指令进行函数调用，符号 `<symbol>` 必须是被调用的函数�
 
 假设 `<symbol>` 的返回值是 unit，即 `fn(T_1, T_2, ...) -> ()` 类型，那么返回值也为 unit 类型.
 
-#### Memory Instructions
-
-```
-alloca ::= 'alloca' <type> ',' <int_lit>
-load   ::= 'load' <symbol>
-store  ::= 'store' <value> ',' <symbol> 
-```
-
-##### 说明
-
-alloca 指令的作用是为局部变量开辟栈空间，并获得一个指向 `<type>` 类型，长度为 `<int_lit>` 的指针.
-可以理解为，在栈上定义一个数组 `<type>[<int_lit>]`，并获取数组首元素的地址.
-或者类比 C 代码 `int *a = (int *)malloc(100 * sizeof(int))`， 对应 `let %a = alloca i32, 100`.
-
-load 指令接受一个指针类型 T* 的符号，返回一个 T 类型的值.
-
-store 指令接受一个类型 T 的值，将其存入一个 T* 类型的符号，并返回 unit 类型的值.
 
 #### Terminator Instructions
 
@@ -292,12 +296,12 @@ fn %factorial(%n: i32) -> i32 {
 ### Globals
 
 ```
-global ::= <symbol> ':' 'region' <type> <int_lit>
+global ::= <symbol> ':' 'region' <type> <int_const>
 ```
 
 ##### 说明
 
-声明全局变量 `<symbol>`，变量具有 `<type>` 类型和 `<int_lit>`.
+声明全局变量 `<symbol>`，变量具有 `<type>` 类型和 `<int_const>`.
 
 ##### 类型规则
 
