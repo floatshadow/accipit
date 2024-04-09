@@ -58,7 +58,7 @@ ident 定义了标识符 (identifier) 集合，你可以理解为 Accipit IR 内
 ```
 int_const    ::=  '-'? <digit>+
 none_const   ::=  'none'
-unit_const   ::=  'unit'
+unit_const   ::=  '()'
 const        ::=  <int_const> | <none_const> | <unit_const>
 ```
 
@@ -68,7 +68,7 @@ const        ::=  <int_const> | <none_const> | <unit_const>
 
 `none_const` 是一个特殊的常数，用于 offset 指令（见下）.
 
-`unit_const` 是单值类型 unit 的常数.
+`unit_const` 是单值类型 `()` 的常数.
 
 ```
 symbol     ::= <ident>
@@ -93,18 +93,20 @@ type    ::=   'i32'
             | 'fn' '(' separated_list(<type>, ',') ')' '->' <type>
 ```
 
-i32，32 位带符号整数.
+`i32`，32 位带符号整数.
 
-单值类型 ()，读作 unit，可以理解为空类型 void.
+单值类型 `()`，读作 unit，和 C 语言中的空类型 void 类似.
+`()` 类型只有一个值 `()`，并且用于表示没有说明有意义的值可以作为指令的结果、函数的返回值.
 
 指针类型，由被指的类型 (pointee type) 加上后缀 * 表示.
+例如 `i32 *` 表示指向 `i32` 类型的指针类型.
 
 函数类型，类似于函数声明，例如：
 
-- 加法 add，两个 i32 参数，一个 i32 返回值 `fn(i32, i32) -> i32`.
-- 读入，无参数，一个 i32 返回值 `fn() -> i32`.
-- 输出，一个 i32 参数，无返回值 `fn(i32) -> ()`.
-- `fn(i32*) -> i32*`，接受一个 i32* 参数，返回一个 i32* 类型的返回值.
+- 加法 add，两个 `i32` 参数，一个 `i32` 返回值 `fn(i32, i32) -> i32`.
+- 读入，无参数，一个 `i32` 返回值 `fn() -> i32`.
+- 输出，一个 `i32` 参数，无返回值 `fn(i32) -> ()`.
+- `fn(i32*) -> i32*`，接受一个 `i32*` 参数，返回一个 `i32*` 类型的返回值.
 
 ### Instructions
 
@@ -147,7 +149,7 @@ binexpr   ::=  <binop> <value> ',' <value>
 
 ##### 类型规则
 
-接受两个 i32 类型操作数，返回一个 i32 类型的值.
+接受两个 `i32` 类型操作数，返回一个 `i32` 类型的值.
 
 
 #### Memory Instructions
@@ -164,9 +166,9 @@ alloca 指令的作用是为局部变量开辟栈空间，并获得一个指向 
 可以理解为，在栈上定义一个数组 `<type>[<int_const>]`，并获取数组首元素的地址.
 或者类比 C 代码 `int *a = (int *)malloc(100 * sizeof(int))`， 对应 `let %a = alloca i32, 100`，只不过 alloca 分配的是栈空间，返回的是栈上的地址.
 
-load 指令接受一个指针类型 T* 的符号，返回一个 T 类型的值.
+load 指令接受一个指针类型 `T*` 的符号，返回一个 `T` 类型的值.
 
-store 指令接受一个类型 T 的值，将其存入一个 T* 类型的符号，并返回 unit 类型的值.
+store 指令接受一个类型 `T` 的值，将其存入一个 `T*` 类型的符号，并返回 unit 类型的值.
 
 
 #### Offset
@@ -204,7 +206,7 @@ offset 指令有一个类型标注，用来表明数组中元素类型；
 假设基地址变量 `<symbol>` 是指针类型 T*，则要求标注的数组中元素类型 `<type>` 必须为 T.
 
 假设，有 `n` 组偏移量和维度 `[index_0 < size_0], [index_1 < size_1], ... [index_{n-1} < size_{n-1}]`，
-为了保证语义的合法性，只有 `size_0` 可以为 `none`，所有的 size 如果不是 `none` 则必须是一个正整数字面量.
+为了保证语义的合法性，所有 index 都必须是整数类型，且要求运行时的值必须为非负整数；所有 size 中只有 `size_0` 可以为 `none`，除此之外必须是一个正整数常数.
 
 
 #### Function Call Instructions
@@ -236,7 +238,7 @@ ret   ::=  'ret' <value>
 
 ##### 说明
 
-br 进行条件跳转，接受的 `<value>` 应当是 i32 类型.
+br 进行条件跳转，接受的 `<value>` 应当是 `i32` 类型.
 若为 true，跳转到第一个 `<label>` 标记的基本块起始处执行；
 若为 false，跳转到第二个 `<label>` 标记的基本块起始处执行.
 
@@ -313,7 +315,7 @@ global ::= <symbol> ':' 'region' <type> <int_const>
 %a : region i32, 2
 ```
 
-则 `%a` 为 `i32*` 类型，所指向的地址能存放 2 个 i32.
+则 `%a` 为 `i32*` 类型，所指向的地址能存放 2 个 `i32` 类型的元素.
 
 ### Comments
 
