@@ -204,7 +204,7 @@ int main () {
 
 实验一和实验二统一提交一次. 你需要提供:
 
-1. 源程序，包括必要的构建系统文件（Makefile/CMakeLists.txt/Cargo.toml/dune-project 等） . 
+1. 源程序，包括必要的构建系统文件（Makefile/CMakeLists.txt/Cargo.toml/dune-project 等）. 
 2. 一份 PDF 格式的实验报告, 内容包括:
 
     - 你的程序实现了哪些功能? 简要说明如何实现这些功能.
@@ -212,15 +212,20 @@ int main () {
     - 实验报告的长度不得超过 6 页. 所以实验报告中需要重点描述的是你的程序中的亮点, 是你认为最个性化/最具独创性的内容, 尤其要避免大段地向报告里贴代码.
     - 测试集中并没有覆盖所有的语法/语义规则, 你可以将你遇到的未覆盖的情况写到报告中, 或者你也可以设计一些新的测试一并提交上来. 
 
-你应当提供一个 `.zip` 文件, 文件名为 `compiler-lab1-lab2-g<小组序号>.zip` (例如第 0 组为 `compiler-lab1-lab2-g0.zip`), 包含以上两项内容. 文件夹解压后，在**根目录**下的结构应当如下:
+**源代码**：你应当提供一个 `.zip` 文件, 文件名为 `compiler-lab1-lab2-g<小组序号>.zip`（例如第 0 组为 `compiler-lab1-lab2-g0.zip`）, 包含以上两项内容. 如果你使用我们提供的 C++ 模板代码，在压缩包解压后，在**根目录**下的结构应当如下:
 
 ```bash
 compiler-lab1-lab2-g0.zip
-├── code/
-└── report.pdf
+├── src/
+├── include/
+├── third_party/
+├── ... # other files
+└── CMakeLists.txt
 ```
 
-如果你使用 macOS，请删除 zip 文件里的 `__MACOSX` 等文件夹.
+- 如果你使用其他语言或者不使用我们提供的模板自己造轮子，提交时可以参考上述文件结构. 简言之，尽量不要出现多余的文件夹嵌套.
+- 如果你使用 macOS，请删除 zip 文件里的 `__MACOSX` 等文件夹.
 
+**报告**：你应当提供一个 `.pdf` 文件，文件名为 `compiler-lab1-lab2-g<小组序号>.pdf`（例如第 0 组为 `compiler-lab1-lab2-g0.pdf`），内容要求如上.
 
 > 建议使用 Git 管理你的代码
