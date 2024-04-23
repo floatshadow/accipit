@@ -8,13 +8,6 @@ use super::structures::{
 };
 
 
-
-#[derive(Debug, Clone)]
-pub struct Function;
-
-#[derive(Debug, Clone)]
-pub struct BasicBlock;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinaryOp {
     /* Numeric Operations */

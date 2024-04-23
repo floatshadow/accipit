@@ -2,6 +2,7 @@ use std::fmt;
 use std::char;
 use std::str::FromStr;
 use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
 
 use crate::ir::{
     values,
@@ -12,7 +13,7 @@ use crate::utils::{
     display_helper::*
 };
 
-use slotmap::{SlotMap, SecondaryMap};
+use slotmap::SecondaryMap;
 use libc::*;
 use colored::Colorize;
 
@@ -80,7 +81,7 @@ impl fmt::Display for ExecutionError {
 pub struct MemoryObject {
     pub frame_index: usize,
     /// Function scope of the object.
-    pub function: String,
+    pub function: FunctionRef,
     /// Base address value of the object.
     pub base: ValueRef,
     /// Pointer offset within the object.
@@ -163,7 +164,7 @@ impl<'a> fmt::Display for DisplayWithContext<'a, Val, Module> {
             Val::Bool(inner) => write!(f, "{}", inner),
             Val::Pointer(inner) =>
                 write!(f, "<inner pointer>: [stack_depth: {}, function: {}, base_value: {}, offset: {}, region_size: {}]",
-                        inner.frame_index, inner.function, module.get_value(inner.base), inner.offset_within, inner.size),
+                        inner.frame_index, module.get_function(inner.function).name, module.get_value(inner.base), inner.offset_within, inner.size),
             Val::Function(name) => write!(f, "function: {}", name),
             Val::Undefined => write!(f, "<undefined>")
         }
@@ -289,41 +290,25 @@ impl Val {
 #[derive(Debug, Clone)]
 pub struct Frame {
     pub frame_val_env: SecondaryMap<ValueRef, Val>,
-    pub frame_memory: SecondaryMap<ValueRef, Vec<Val>>,
-    pub working_function: Option<FunctionRef>
+    pub local_allocas: HashSet<ValueRef>,
+    pub working_function: FunctionRef
 }
 
 impl Frame {
     pub fn new(working_function: FunctionRef) -> Frame {
         Frame {
             frame_val_env: SecondaryMap::new(),
-            frame_memory: SecondaryMap::new(),
-            working_function: Some(working_function)
+            local_allocas: HashSet::new(),
+            working_function
         }
     }
 
-    pub fn new_global() -> Frame {
-        Frame {
-            frame_val_env: SecondaryMap::new(),
-            frame_memory: SecondaryMap::new(),
-            working_function: None
-        }
+    pub fn set_local_val(&mut self, value: ValueRef, val: Val) -> Option<Val> {
+        self.frame_val_env.insert(value, val) 
     }
 
-    pub fn set_local_val(&mut self, val_ref: ValueRef, value: Val) -> Option<Val> {
-        self.frame_val_env.insert(val_ref, value) 
-    }
-
-    pub fn get_local_val(&self, value_ref: ValueRef) -> &Val {
-        self.frame_val_env.get(value_ref).unwrap()
-    }
-
-    pub fn get_local_memory(&self, base: ValueRef) -> &Vec<Val> {
-        self.frame_memory.get(base).unwrap()
-    }
-
-    pub fn get_local_memory_mut(&mut self, base: ValueRef) -> &mut Vec<Val> {
-        self.frame_memory.get_mut(base).unwrap()
+    pub fn get_local_val(&self, value: ValueRef) -> Option<&Val> {
+        self.frame_val_env.get(value)
     }
 }
 
@@ -333,7 +318,11 @@ pub struct ProgramEnv {
     pub position: Option<BlockRef>,
     /// program counter.
     pub program_counter: Option<ValueRef>,
-    pub global_frame: Frame,
+    /// memory, managed as global state.
+    pub memory: HashMap<(ValueRef, usize), Vec<Val>>,
+    /// global values.
+    pub global_val: SecondaryMap<ValueRef, Val>,
+    /// function frames.
     pub frames: Vec<Frame>
 }
 
@@ -342,89 +331,61 @@ impl ProgramEnv {
         self.frames.last()
     }
 
-    pub fn get_top_frame_mut(&mut self) -> Option<&mut Frame> {
-        self.frames.last_mut()
+    pub fn get_num_frames(&self) -> usize {
+        self.frames.len()
     }
 
-    pub fn get_global_frame(&self) -> &Frame {
-        &self.global_frame
+    pub fn prologue(&mut self, function: FunctionRef) {
+        self.frames.push(Frame::new(function))
     }
 
-    pub fn get_global_frame_mut(&mut self) -> &mut Frame {
-        &mut self.global_frame
-    }
-
-    fn search_value_env(
-        &self,
-        val_ref: ValueRef
-    ) -> Option<&Frame> {
-        let top_frame = self.get_top_frame().expect("no active frame");
-        if top_frame.frame_val_env.contains_key(val_ref) {
-            Some(top_frame)
-        } else {
-            let global_frame = self.get_global_frame();
-            if global_frame.frame_val_env.contains_key(val_ref) {
-                Some(global_frame)
-            } else {
-                None
-            }
+    pub fn epilogue(&mut self) {
+        let exit_frame = self.frames.last()
+            .expect("no active frame frame");
+        let frame_index = self.get_num_frames();
+        for allocas in exit_frame.local_allocas.iter().cloned() {
+            let key_info = (allocas, frame_index);
+            self.memory.remove(&key_info);
         }
-        
+        self.frames.pop();
     }
 
-    fn search_value_env_mut(
-        &mut self,
-        val_ref: ValueRef
-    ) -> Option<&mut Frame> {
-        let top_frame = self.get_top_frame().expect("no active frame");
-        if top_frame.frame_val_env.contains_key(val_ref) {
-            self.get_top_frame_mut()
-        } else {
-            let global_frame = self.get_global_frame();
-            if global_frame.frame_val_env.contains_key(val_ref) {
-                Some(self.get_global_frame_mut())
-            } else {
-                // slient return top frame assume set the `val`` of a new `value`
-                self.get_top_frame_mut()
-            }
-        }
+    // non persistent mutable update.
+    pub fn set_value_binding(&mut self, value: ValueRef, val: Val) -> Option<Val> {
+        let top_frame = self.frames
+            .last_mut()
+            .expect("no active function frame");
+        top_frame.set_local_val(value, val)
     }
 
-    pub fn set_val(&mut self, val_ref: ValueRef, value: Val) -> Option<Val> {
-        self.get_top_frame_mut()
-            .expect("cannot find value in current scope")
-            .set_local_val(val_ref, value)
+    pub fn get_val(&self, value: ValueRef) -> &Val {
+        let top_frame = self.frames
+            .last()
+            .expect("no active function frame");
+        top_frame
+            .get_local_val(value)
+            .or_else(| | self.global_val.get(value))
+            .expect("value does not exist")
     }
 
-    pub fn get_val(&self, val_ref: ValueRef) -> &Val {
-        self.search_value_env(val_ref)
-            .expect("cannot find value in current scope")
-            .get_local_val(val_ref)
+    pub fn get_memory(&self, ptr: ValueRef, frame_index: usize) -> &Vec<Val> {
+        let key_info = (ptr, frame_index);
+        self.memory
+            .get(&key_info)
+            .expect("try to load from a memory region which does not exist")
     }
 
-    pub fn get_top_function<'a>(&'a self, module: &'a Module) -> &Function {
-        module.get_function(
-            self.get_top_frame()
-            .expect("no active frame")
-            .working_function
-            .expect("global variable scope, no function is active"))
+    pub fn get_memory_mut(&mut self, ptr: ValueRef, frame_index: usize) -> &mut Vec<Val> {
+        let key_info = (ptr, frame_index);
+        self.memory
+            .get_mut(&key_info)
+            .expect("try to store into a memory region which does not exist")
     }
 
-    pub fn get_memory(&self, base: ValueRef) -> &Vec<Val> {
-        self.get_global_frame()
-            .get_local_memory(base)
-    }
-
-    pub fn get_memory_mut(&mut self, base: ValueRef) -> &mut Vec<Val> {
-        self.get_global_frame_mut()
-            .get_local_memory_mut(base)
-    }
-
-    pub fn initialize_memory(&mut self, base: ValueRef, size: usize) {
+    pub fn initialize_memory(&mut self, ptr: ValueRef, size: usize) {
         let unitialized_object = vec![Val::Undefined; size];
-        self.get_global_frame_mut()
-            .frame_memory
-            .insert(base, unitialized_object);
+        let frame_index = self.get_num_frames();
+        self.memory.insert((ptr, frame_index), unitialized_object);
     }
 }
 
@@ -433,7 +394,8 @@ impl ProgramEnv {
         ProgramEnv {
             position: None,
             program_counter: None,
-            global_frame: Frame::new_global(),
+            memory: HashMap::new(),
+            global_val: SecondaryMap::new(),
             frames: Vec::new()
         }
     }
@@ -543,7 +505,7 @@ pub fn single_step(
                                     "'getarray' expect a 'int' input as array size"
                                 );
                             }
-                            let buffer = env.get_memory_mut(inner.base);
+                            let buffer = env.get_memory_mut(inner.base, inner.frame_index);
                             assert!(n >= 0, "'{}' expect a non-negative array size", "getarray".bold());
                             for i in 0..n {
                                 let mut val: i32 = 0;
@@ -599,7 +561,7 @@ pub fn single_step(
                     let addr = args_val[1].clone();
                     match addr {
                         Val::Pointer(inner) => {
-                            let buffer = env.get_memory(inner.base);
+                            let buffer = env.get_memory(inner.base, inner.frame_index);
                             assert!(num >= 0, "'{}', expect a non-negative array size", "putarray".bold());
                             for i in 0..num {
                                 assert!(inner.offset_within + (i as usize) < inner.size,
@@ -636,10 +598,11 @@ pub fn single_step(
             }
         },
         ValueKind::Alloca(inner) => {
-            let function = env.get_top_function(module);
+            let frame = env.get_top_frame()
+                .expect("no active function frame");
             let memory_object = MemoryObject {
-                frame_index: env.frames.len(),
-                function: function.name.clone(),
+                frame_index: env.get_num_frames(),
+                function: frame.working_function,
                 base: value,
                 offset_within: 0,
                 size: inner.num_elements
@@ -650,25 +613,24 @@ pub fn single_step(
         ValueKind::Load(inner) => {
             let addr_value = module.get_value(inner.addr);
             let addr_val = env.get_val(inner.addr);
-            let memory_object = match addr_val {
-                Val::Pointer(memory_object) => Ok(memory_object.clone()),
+            let ptr = match addr_val {
+                Val::Pointer(inner) => Ok(inner.clone()),
                 _ => Err(ExecutionError::TypeMismatch(addr_value.clone(), addr_val.clone()))
             }?;
 
-            let whole_object = env.get_memory(memory_object.base);
-            Ok(whole_object[memory_object.offset_within].clone())
+            let region = env.get_memory(ptr.base, ptr.frame_index);
+            Ok(region[ptr.offset_within].clone())
         },
         ValueKind::Store(inner) => {
             let addr_value = module.get_value(inner.addr);
             let addr_val = env.get_val(inner.addr);
-            let memory_object = match addr_val {
-                Val::Pointer(memory_object) => Ok(memory_object.clone()),
+            let ptr = match addr_val {
+                Val::Pointer(inner) => Ok(inner.clone()),
                 _ => Err(ExecutionError::TypeMismatch(addr_value.clone(), addr_val.clone()))
             }?;
-
             let value_stored = env.get_val(inner.value).clone();
-            let whole_object = env.get_memory_mut(memory_object.base);
-            whole_object[memory_object.offset_within] = value_stored;
+            let region = env.get_memory_mut(ptr.base, ptr.frame_index);
+            region[ptr.offset_within] = value_stored;
             Ok(Val::Unit)
         }
         _ => Err(ExecutionError::NotImplemented(String::from("Expected Instruction")))
@@ -700,6 +662,7 @@ pub fn single_step_terminator(
             Ok(Val::Unit)
         },
         Terminator::Return(inner) => {
+            // finish running
             env.position = None;
             let ret_val = env.get_val(inner.value);
             // check dangling pointer
@@ -726,7 +689,7 @@ pub fn run_on_basicblock(
     for instr in block.instrs.iter().cloned() {
         env.program_counter = Some(instr);
         let val = single_step(env, module, instr)?;
-        env.set_val(instr, val);
+        env.set_value_binding(instr, val);
     };
     single_step_terminator(env, module, &block.terminator)
 }
@@ -737,7 +700,7 @@ pub fn run_on_function(
     function: FunctionRef,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
-    env.frames.push(Frame::new(function));
+    env.prologue(function);
     let function = module.get_function(function);
     // set args values
     if function.args.len() != args.len() {
@@ -753,7 +716,7 @@ pub fn run_on_function(
 
     params
         .into_iter().zip(function.args.iter().cloned())
-        .for_each(| (val, value) | { env.set_val(value, val); } );
+        .for_each(| (val, value) | { env.set_value_binding(value, val); } );
 
     let entry_bb = function.blocks[0];
     env.position = Some(entry_bb);
@@ -764,7 +727,7 @@ pub fn run_on_function(
         let block = function.get_basic_block(current_bb);
         bb_exit_val = run_on_basicblock(env, module, block)?;
     };
-    env.frames.pop();
+    env.epilogue();
     Ok(bb_exit_val)
 
 }
@@ -776,18 +739,17 @@ pub fn run_on_module(
     entry_fn: &str,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
-    let global_frame = env.get_global_frame_mut();
     // set all constant value
     module.value_ctx
         .iter()
         .for_each(| (value, value_data) | {
             match &value_data.kind {
                 ValueKind::ConstantInt(inner) =>
-                    global_frame.set_local_val(value, Val::Integer(inner.value)),
+                    env.global_val.insert(value, Val::Integer(inner.value)),
                 ValueKind::ConstantBool(inner) =>
-                    global_frame.set_local_val(value, Val::Bool(inner.value)),
+                    env.global_val.insert(value, Val::Bool(inner.value)),
                 ValueKind::ConstantUnit(_) =>
-                    global_frame.set_local_val(value, Val::Unit),
+                    env.global_val.insert(value, Val::Unit),
                 _ => None,
             };
         });
