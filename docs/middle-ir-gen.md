@@ -110,6 +110,8 @@ fn %factorial(#n: i32) -> i32 {
 $ clang -S -emit-llvm file.c -o file.bc
 # convert to dot file
 $ opt -dot-cfg -disable-output -enable-new-pm=0 file.bc
+# if you are using a newer version of LLVM toolchain with new PassManager, try
+# $ opt -passes=dot-cfg -disable-output test.bc
 Writing '.file.dot'...
 # dot render png file
 $ dot -Tpng -o file.png .file.dot
@@ -835,13 +837,59 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> exit_bb<span class="op">;</span></span></code></pre></div></td>
 </tr>
+<tr class="even">
+<td><code>Return Expr</code></td>
+<td><div class="sourceCode" id="cb8"><pre
+class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>return_bb <span class="op">=</span> get_function_ret_bb<span class="op">();</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>return_addr <span class="op">=</span> get_function_ret_value_addr<span class="op">();</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>return_value <span class="op">=</span> translate_expr<span class="op">(</span>Expr<span class="op">,</span> sym_table<span class="op">,</span> current_bb<span class="op">);</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co">// store the value of Expr to the slot of return value on the stack.</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>create_store<span class="op">(</span>return_value<span class="op">,</span> return_addr<span class="op">,</span> current_bb<span class="op">);</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">// jump to the return basic block</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>create_jump<span class="op">(</span>return_bb<span class="op">,</span> current_bb<span class="op">);</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">// the control flow ends with `Return`, so we can return a &#39;empty basic block&#39;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="kw">nullptr</span><span class="op">;</span></span></code></pre></div></td>
+</tr>
 </tbody>
 </table>
+
+你需要特别关注局部变量的声明和返回语句。
 
 局部变量（包括函数参数）声明语句需要翻译成 `alloca` 指令，用来将它们放在栈空间上.
 你需要注意，所有的 `alloca` 指令都应该放在整个函数开头的入口基本块内，而不是局部变量声明出现的那个语句块对应的基本块.
 `alloca` 指令的作用域是整个函数，如果你“原地翻译”，那么可以想象一下 While 循环内声明一个局部变量——每次循环都分配栈空间，循环次数一多就爆栈了——这个变量被反复分配了新的栈空间.
 其次，正如上文 `translate_expr` 提到的，你需要即时更新符号表 `sym_table`.
+
+返回语句并不是直接插入 `ret` 指令那么简单，在底层汇编中，return 通常在函数结尾，除了根据 ABI 将返回值赋给对应的寄存器，你还需要清理栈帧（恢复栈指针，帧指针，恢复 callee saved register 等）.
+因此直接原地翻译 return 是不合适的，为了你后端能够舒适一些，你应当在函数入口为返回值安排一块栈空间 `%ret.addr`，并在函数末尾单独添加一个 `%return_bb`.
+函数体中遇到的 “early return” 应当按如下翻译：
+
+- 将函数的返回值存入 `%ret.addr`
+- 跳转到 `%return_bb` 处，**同时你不应该再插入别的跳转语句**，特别当 return 位于结构化控制流 If 和 While 内部时
+
+对于 `%return_bb`，你应当：
+
+- 从 `%ret.addr` 读出函数返回值
+- 插入真正的 `ret` 指令
+
+### 短路
+
+短路（shortcut）是指在逻辑连词中一部分子表示式计算被“跳过”的情况，例如：
+
+- `1 > 2 && call_foo()` 由于与运算左侧的 `1 > 2` 为假（即 0），那么右侧的表达式不会被执行，即 `call_foo()` 被“跳过”，整个表达式返回 0.
+- `1 < 2 || call_bar()` 由于或运算左侧的 `1 < 2`为真（即 1），那么右侧的表达式不会被执行，即 `call_bar()` 被“跳过”，整个表达式返回 1.
+- 更进一步地，对于类似 `1 > 2 && 3 > 4 && call_foo()` 等连续连词的情况，在 AST 上为 `(1 > 2 && 3 > 4) && call_foo()`，由于 `1 > 2` 为假，因此 `3 > 4` 会被“跳过”，因此左侧 `(1 > 2 && 3 > 4)` 为 0，进一步右侧 `call_foo()` 被“跳过”.  
+
+纯算术表达式计算被短路对结果并不会有什么影响，但是如果表达式有副作用（例如，考虑上文中的函数调用 `call_bar()` 会输出一些内容），就会产生语义上的区别。
+
+简言之，短路语义的结果是，在 If 和 While 等语句的条件判断中，并不是先算好整个条件表达式的结果再跳转，而是先算左侧，进行判断：或者短路，直接跳转；或者进行右侧计算，再跳转。
+相比上一小节平凡的 If 和 While 语句翻译，你需要展开语句，插入辅助的基本块来翻译控制流信息，例如，下为条件为 `&&` 表达式的 If 语句控制流图：
+
+
+![shortcut if and](images/shortcut_if_and.svg)
+
+其他情况与之类似，我们不再赘述，翻译规则略.
 
 ## 解释器
 
