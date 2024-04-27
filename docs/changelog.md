@@ -1,3 +1,9 @@
+<style>
+h2:before {
+	content: none;
+}
+</style>
+
 # 更新日志
 
 ## 2024-4-28
