@@ -17,6 +17,6 @@ int main(){
   array[1][1][0] = 7;
   array[1][1][1] = 8;
 
-  putint(f(array[2][2][2]));
+  putint(f(array));
   return 0;
 }
