@@ -55,6 +55,12 @@ ident 定义了标识符 (identifier) 集合，你可以理解为 Accipit IR 内
 - 带有名称的变量，例如 `%foo` `@DivisionByZero` ` %a.really.long.identifier`.
 - 匿名的变量或者临时变量，通常按出现的顺序使用一个非负整数命名，例如 `%12` `@2` `%0`.
 
+其中，`%` `#` 和 `@` 前缀用于表示不同作用域的值：
+
+- `%` 前缀用于局部的值，例如指令定义的符号、基本块符号.
+- `#` 前缀用于函数的参数符号.
+- `@` 前缀用于全局变量和函数符号.
+
 ```
 int_const    ::=  '-'? <digit>+
 none_const   ::=  'none'
@@ -274,21 +280,21 @@ bb    ::= <label> <instr>* <terminator>
 
 下面是一个阶乘函数的例子：
 ```
-fn %factorial(%n: i32) -> i32 {
+fn @factorial(#n: i32) -> i32 {
 %Lentry:
     /* Create a stack slot of i32 type as the space of the return value.
      * if n equals 1, store `1` to this address, i.e. `return 1`,
      * otherwise, do recursive call, i.e. return n * factorial(n - 1).
      */
     let %ret.addr = alloca i32, 1
-    let %cmp = eq %n, 0
+    let %cmp = eq #n, 0
     br %cmp, label %Ltrue, label %Lfalse
 %Ltrue:
     let %6 = store 1, %ret.addr
     jmp label %Lret
 %Lfalse:
-    let %9 = sub %n, 1
-    let %res = call %factorial, %9
+    let %9 = sub #n, 1
+    let %res = call @factorial, %9
     let %11 = mul %9, %res
     let %12 = store %11, %ret.addr
     jmp label %Lret

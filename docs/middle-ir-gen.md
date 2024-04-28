@@ -51,7 +51,7 @@ int factorial(int n) {
 
 参考中间代码：
 ```rust
-fn %factorial(#n: i32) -> i32 {
+fn @factorial(#n: i32) -> i32 {
 %Lentry:
     // create a stack slot of i32 type as the space of the return value.
     // if n equals 1, store `1` to this address, i.e. `return 1`,
@@ -76,7 +76,7 @@ fn %factorial(#n: i32) -> i32 {
     let %13 = load %n.addr
     let %14 = sub %13, 1
     // factorial(n - 1)
-    let %res = call %factorial, %14
+    let %res = call @factorial, %14
     // n
     let %16 = load %n.addr
     // n * factorial(n - 1)
