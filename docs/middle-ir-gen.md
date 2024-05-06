@@ -904,6 +904,10 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1
 
 其他情况与之类似，我们不再赘述，翻译规则略.
 
+!!! warning "注意"
+    C 的赋值语句也有短路语义，例如 `int a = 2 < 1 && 3 > 4`.
+    这引起的结果是 Expr 也可能产生控制流转移，为了方便起见，我们不会测试此类短路情况，但是你有兴趣可以实现.
+
 ## 解释器
 
 为了检测生成的中间代码生成正确性和评测，我们为大家提供了一个该中间表示的解释器。
@@ -956,6 +960,94 @@ $ accipit examples/factorial.acc
 
 ## C++ 模板代码说明
 
-出于实现上的方便，方便维护 use-def chain，类继承关系如下图所示：
+请从 [ZJU Git](https://git.zju.edu.cn/accsys/accsys-cmake-template) 处获取模板代码，并阅读相关说明.
+模板代码已经实现了 IR 的构造和输出到字符串文本格式的接口，你只需关心翻译到 IR 的过程即可.
+
+### Utils
+
+在 `utils` 下，我们实现了侵入式链表 `List<T>`（位于 [list.h](https://git.zju.edu.cn/accsys/accsys-cmake-template/-/blob/master/accsys/include/utils/list.h?ref_type=heads)）和前述基于模板的 RTTI （位于 [casting.h](https://git.zju.edu.cn/accsys/accsys-cmake-template/-/blob/master/accsys/include/utils/casting.h?ref_type=heads)）
+
+对于 `List<T>` 你通常不会直接使用到，一般只作为底层存放 IR 的数据结构.
+
+对于 RTTI，我们实现了 `isa<T>()` `dyn_cast<T>()` 和 `cast<T>()` 三个函数：
+
+- `isa<To>(Val)`：返回 `Val` 是否为 To 类型
+- `dyn_cast<To>(Val)`：如果 `Val` 为 To 类型，则进行 cast，否则返回 nullptr
+- `cast<To>(Val)`： 如果 `Val` 为 To 类型，则进行 cast，否则报错
+
+上述三个函数使用模板并进行了偏特化，因此相比上述的 `is` 和 `as` 适用性更好，能够处理 `From &Val`、`From *Val`、`const From *Val` 和 `const From *const Val` 等情况，并算出合适的返回类型，模板类型参数 To 不必须是指针类型
+
+### Type 类
+
+表示 Accipit IR 中的各类 Type，包括基类 `Type` 、派生类 `PointerType` 和 `FunctionType`.
+定义于 [type.h](https://git.zju.edu.cn/accsys/accsys-cmake-template/-/blob/master/accsys/include/ir/type.h?ref_type=heads)
+
+你只能使用静态成员函数获得 `Type *` 类型的值：
+
+```cpp title="type.h"
+class Type {
+    //...
+    static Type *getPrimitiveTy(unsigned tid);
+    static Type *getIntegerTy();
+    static Type *getUnitTy();
+};
+
+class PointerType {
+    //...
+    static PointerType *get(Type *ElementType);
+};
+
+class FunctionType {
+    //...
+    static FunctionType *get(Type *Result, const std::vector<Type *> &Params);
+    //... 
+    static FunctionType *get(Type *Result);
+};
+```
+
+我们对除 `FunctionType` 以外的类进行了缓存，因此你在大部分情况下可以以指针比较的方式比较两个 `Type` 是否相同：
+
+```cpp
+assert(Type::getUnitTy() == Type::getUnitTy() && "Type * should be the same")
+```
+
+### Value 类
+
+`Value` 类定义于 [ir.h](https://git.zju.edu.cn/accsys/accsys-cmake-template/-/blob/master/accsys/include/ir/ir.h?ref_type=heads).
+类继承关系如下图所示：
 
 ![impl-value-instruction](images/impl-value-instruction.svg)
+
+
+正如我们之前所述，`Value` 类包含符号和常数，具体来说，涉及：
+
+- 常数的基类 `Constant` 以及派生类 `ConstantInt` 与 `ConstantUnit`
+- 指令基类 `Instruction`，每种指令都有其对应的派生类，例如 `BinaryInst` 和 `AllocaInst`.
+- 全局变量 `GlobalVariable` 和函数参数 `Argument`
+
+几乎所有的 `Value` 都实现了静态成员函数 `Create` 并返回一个 `Value *` 类型的值.
+`Value` 类构造函数都是私有的，你不允许直接调用它们，只能使用 Create 接口，因为 IR 内部有自己的内存管理方式.
+
+出于实现上的方便，并维护 `use-def chain`，terminator 类型的指令也是 `Value` 的子类
+
+
+### IR Structures
+
+`Instruction` 类，使用 `Instruction` 子类的 Create 接口构造，有以下重要的通用接口：
+
+- `getOpcode()` 获取指令的操作码，所有操作码是枚举 `BinaryOps`、`MemoryOps`、`OtherOps` 和 `TerminatorOps` 的其中一种.
+- `getOperand()` 获取指令使用的 Value（操作数）.
+注意，根据定义，Function 和 BasicBlock 等均不是 Value.
+- 各类 insert 接口，将这条“游离”的指令插入到某个基本块中（`insertInto`），或插入某条指令之前（`insertBefore`）或之后（`insertAfter`）.
+
+`BasicBlock` 类，基本块，通过 Create 接口构造，通过 `insertInto` 接口插入到某个函数中.
+
+`Function` 类，函数类，通过 Create 接口构造，需要指定其所在的 Module
+
+`GlobalVariable` 类，全局变量类，通过 Create 接口构造，需要指定其所在的 Module
+
+`Module` 类，编译单元，实现了 print 接口，打印 IR
+
+### 使用示例和单元测试
+
+IR 相关的部分编写了一些单元测试，位于 [test](https://git.zju.edu.cn/accsys/accsys-cmake-template/-/tree/master/accsys/test?ref_type=heads) 子文件夹中，你可以运行这些测试，并参考我们提供的接口的使用方式
