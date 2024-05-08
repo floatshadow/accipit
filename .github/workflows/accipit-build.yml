@@ -1,0 +1,62 @@
+name: Accipit Build and Release
+
+on:
+  workflow_dispatch:
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: linux-aarch64-musl
+            target: aarch64-unknown-linux-musl
+            asset: accipit-linux-aarch64-musl
+          - os: linux-x86_64-musl
+            target: x86_64-unknown-linux-musl
+            asset: accipit-linux-x86_64-musl
+          - os: linux-x86_64-gnu
+            target: x86_64-unknown-linux-gnu
+            asset: accipit-linux-x86_64-gnu
+          - os: windows-x86_64-msvc
+            target: x86_64-pc-windows-msvc
+            asset: accipit-windows-x86_64-msvc.exe
+          - os: windows-x86_64-gnu
+            target: x86_64-pc-windows-gnu
+            asset: accipit-windows-x86_64-gnu.exe
+          - os: darwin-x86_64
+            target: x86_64-apple-darwin
+            asset: accipit-darwin-x86_64
+          - os: darwin-aarch64
+            target: aarch64-apple-darwin
+            asset: accipit-darwin-aarch64
+        toolchain:
+          - stable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "build"
+          target: ${{ matrix.platform.target }}
+          toolchain: ${{ matrix.toolchain }}
+          args: "--release"
+          strip: true
+      - name: Rename binary (linux and macos)
+        run: mv target/${{ matrix.platform.target }}/release/accipit target/${{ matrix.platform.target }}/release/${{ matrix.platform.asset }}
+        if: ${{ startWith(matrix.platform.os, 'linux') || startWith(matrix.platform.os, 'darwin') }}
+      - name: Rename binary (windows)
+        run: mv target/${{ matrix.platform.target }}/release/accipit.exe target/${{ matrix.platform.target }}/release/${{ matrix.platform.asset }}
+        if: ${{ startWith(matrix.platform.os, 'windows') }}
+      - name: Generate SHA-256
+        run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.asset }} | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.asset }}.sha256
+      - name: Release binary and SHA-256 checksum to GitHub
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/${{ matrix.platform.target }}/release/${{ matrix.platform.asset }}
+            target/${{ matrix.platform.target }}/release/${{ matrix.platform.asset }}.sha256

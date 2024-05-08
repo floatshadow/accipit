@@ -1,14 +1,18 @@
 name: Deploy on GitHub Pages
+
 on:
+  workflow_dispatch:
   push:
     branches: 
       - main
+    paths:
+      - 'docs/**'
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.x
       - run: pip install mkdocs-material mkdocs-heti-plugin
