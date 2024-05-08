@@ -1,3 +1,7 @@
+stages:
+  - build
+  - deploy
+
 pages:
   tags:
     - pages-builder
@@ -12,3 +16,15 @@ pages:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+rust_musl_build:
+  stage: build
+  tags:
+    - rust
+  only:
+    - main
+  script:
+    - cargo build --release --target x86_64-unknown-linux-musl
+  artifacts:
+    paths:
+      - target/x86_64-unknown-linux-musl/release/accipit
