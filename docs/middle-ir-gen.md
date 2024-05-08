@@ -957,6 +957,7 @@ $ accipit examples/factorial.acc
 - 从前端 SysY 的类型翻译到 Accipit IR 的类型. Accipit IR 是一个“强类型”的中间表示，且和前端 SysY 的类型有所区别.
 - 实现符号表 `sym_table` 管理，需要注意此处的符号表和语义分析的任务不同.
 - 实现翻译函数 `translate_expr` 和 `translate_stmt` 的功能，即从前端的一棵 `Node` 类型的语法树，转换到 `Module`-`Function`-`BasicBlock`-`Instruction` 的 Accipit IR 层级结构.
+- 实现在结构化控制流 If 和 While 中条件表达式短路语义的翻译.
 
 ## C++ 模板代码说明
 
