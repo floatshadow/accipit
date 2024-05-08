@@ -1,5 +1,4 @@
-use std::path::{Path, PathBuf};
-use std::ffi::OsString;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::str::FromStr;
@@ -8,17 +7,12 @@ use clap::Parser;
 
 use accipit::{
     frontend::{
-        token::{Tokens, Token},
+        token::Tokens,
         lexer,
         parser,
     },
-    ir::{
-        builders::IRBuilder,
-        structures::*
-    },
-    apps::{
-        executor::*,
-    }
+    ir::builders::IRBuilder,
+    apps::executor::*,
 };
 
 #[derive(Parser, Debug)]

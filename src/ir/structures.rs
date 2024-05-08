@@ -5,7 +5,7 @@ use slotmap::{new_key_type, SlotMap};
 use itertools::Itertools;
 
 use super::values;
-use super::types::{Type, TypeKind};
+use super::types::Type;
 use crate::utils::display_helper::*;
 
 new_key_type! {

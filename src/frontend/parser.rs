@@ -4,7 +4,7 @@ use nom::{
     branch::alt,
     bytes::complete::take,
     combinator::{all_consuming, map, opt, peek, value},
-    error::{context, Error, ErrorKind, ParseError, VerboseError},
+    error::{ErrorKind, ParseError, VerboseError},
     multi::{fold_many1, many0, many0_count, many1, many1_count, separated_list0},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
     Compare, CompareResult, Err, InputIter, InputLength, InputTake
@@ -14,7 +14,6 @@ use crate::ir::{
     builders::IRBuilder, structures::*, types::Type, values
 };
 
-use super::{lexer::Lexer, token};
 use super::token::{Token, Tokens};
 
 pub type IResult<I, O, E=nom::error::VerboseError<I>> = Result<(I, O), nom::Err<E>>;
@@ -524,9 +523,10 @@ impl<'a, 'b: 'a> Parser {
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>
     ) -> IResult<Tokens<'a>, Module> {
-        let (input, _) = all_consuming(many1(
+        let (input, _) = all_consuming(many1(alt((
+            | input: Tokens<'a> | Parser::parse_global_variable(input, builder.clone()),
             | input: Tokens<'a> | Parser::parse_function(input, builder.clone())
-        ))(input)?;
+        ))))(input)?;
 
         Ok((input, builder.borrow().module.clone()))
     }
@@ -536,8 +536,6 @@ impl<'a, 'b: 'a> Parser {
 
 #[cfg(test)]
 mod test {
-    use crate::frontend::parser;
-    use crate::ir::builders;
 
     use super::*;
     use super::super::lexer::Lexer;

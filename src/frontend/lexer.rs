@@ -3,18 +3,16 @@ use nom::{
     branch::alt,
     bytes::complete::{is_not, tag, take_until},
     character::complete::{
-        alpha0, alpha1, 
-        alphanumeric0, alphanumeric1, 
-        char, digit0, digit1, 
-        multispace0, multispace1
+        alpha1, 
+        alphanumeric1, 
+        digit1, 
+        multispace1
     },
-    combinator::{all_consuming, cut, map_res, opt, recognize, value},
-    multi::{fold_many1, many0, many0_count, many1, separated_list0}, 
-    sequence::{delimited, pair, preceded, separated_pair, terminated, tuple}, 
-    Err
+    combinator::{all_consuming, map_res, opt, recognize, value},
+    multi::{many0_count, many1}, 
+    sequence::{pair, preceded, terminated, tuple}, 
 };
 
-use crate::ir::builders::IRBuilder;
 
 use super::token::Token;
 
