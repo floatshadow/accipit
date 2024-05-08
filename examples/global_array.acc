@@ -1,0 +1,36 @@
+
+// a is a global array with 105 i32 elements.
+// Suppose in SysY it is a multi-dimension array `int a[5][3][7]`
+@a : region i32, 105
+
+
+fn @write_global_var(#value: i32) -> () {
+%entry:
+    // offset: 3 * 3 * 7 + 2 * 7 + 4 = 81
+    let %0 = offset i32, @a, [3 < 5], [2 < 3], [4 < 7]
+    let %1 = store #value, %0
+    // offset based on previous offsets.
+    // offset: 81 + 1 * 3 * 7 + 2 = 104
+    let %2 = offset i32, %0, [1 < 5], [0 < 3], [2 < 7]
+    let %3 = add #value, 1
+    let %4 = store %3, %2
+    ret ()
+}
+
+fn @read_global_var(#dim1: i32, #dim2: i32, #dim3: i32) -> i32 {
+%entry:
+    let %0 = offset i32, @a, [#dim1 < 5], [#dim2 < 3], [#dim3 < 7]
+    let %1 = load %0
+    ret %1
+}
+
+fn @main() -> () {
+%entry:
+    let %0 = call @write_global_var, 10
+    let %1 = call @read_global_var, 3, 2, 4
+    let %2 = call @read_global_var, 4, 2, 6
+    let %3 = call @putint, %1
+    let %4 = call @putch, 10
+    let %5 = call @putint, %2
+    ret ()
+}

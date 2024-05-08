@@ -739,18 +739,45 @@ pub fn run_on_module(
     entry_fn: &str,
     args: Vec<Val>
 ) -> Result<Val, ExecutionError> {
+    // FIXME, insert a phantom function as the global 'frame'.
+    use crate::ir::types::Type;
+    use slotmap::SlotMap;
+    let phantom_function = Function {
+        ty: Type::get_function( vec![], Type::get_unit()),
+        name: "<global frame>".to_string(),
+        args: vec![],
+        is_external: false,
+        blocks: vec![],
+        blocks_ctx: SlotMap::with_key()
+    };
+    let mut phantom_function_ctx: SlotMap<FunctionRef, Function> = SlotMap::with_key();
+    let phantom_function_ref = phantom_function_ctx.insert(phantom_function);
     // set all constant value
     module.value_ctx
         .iter()
         .for_each(| (value, value_data) | {
             match &value_data.kind {
-                ValueKind::ConstantInt(inner) =>
-                    env.global_val.insert(value, Val::Integer(inner.value)),
-                ValueKind::ConstantBool(inner) =>
-                    env.global_val.insert(value, Val::Bool(inner.value)),
-                ValueKind::ConstantUnit(_) =>
-                    env.global_val.insert(value, Val::Unit),
-                _ => None,
+                ValueKind::ConstantInt(inner) => {
+                    env.global_val.insert(value, Val::Integer(inner.value));
+                },
+                ValueKind::ConstantBool(inner) => {
+                    env.global_val.insert(value, Val::Bool(inner.value));
+                },
+                ValueKind::ConstantUnit(_) => {
+                    env.global_val.insert(value, Val::Unit);
+                },
+                ValueKind::GlobalVar(inner) => {
+                    env.global_val.insert(value, Val::Pointer(MemoryObject {
+                        frame_index: 0,
+                        function: phantom_function_ref,
+                        base: value,
+                        offset_within: 0,
+                        size: inner.size
+                    }));
+                    // allocate memory
+                    env.initialize_memory(value, inner.size);
+                },
+                _ => (),
             };
         });
 

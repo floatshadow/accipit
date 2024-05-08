@@ -1,21 +1,21 @@
 
 fn @read_write_array(#array.addr: i32*) -> i32 {
 %entry:
-    let %size = call %getarray, #array.addr
-    let %0 = call %putarray, %size, #array.addr
+    let %size = call @getarray, #array.addr
+    let %0 = call @putarray, %size, #array.addr
     ret %size
 }
 
 fn @main() -> () {
 %0:
     let %array.addr = alloca i32, 10
-    let %size = call %read_write_array, %array.addr
-    let %1 = call %putch, 10
-    let %2 = call %putint, %size
-    let %3 = call %putch, 10
-    let %index = call %getint
+    let %size = call @read_write_array, %array.addr
+    let %1 = call @putch, 10
+    let %2 = call @putint, %size
+    let %3 = call @putch, 10
+    let %index = call @getint
     let %offset = offset i32, %array.addr, [%index < 10]
     let %value = load %offset
-    let %4 = call %putint, %value
+    let %4 = call @putint, %value
     ret ()
 }
