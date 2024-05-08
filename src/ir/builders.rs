@@ -319,7 +319,7 @@ impl IRBuilder {
         let inner_name = self.get_unique_name(&name);
         assert!(
             lhs_ty.is_integer_type() && lhs_ty.eq(&rhs_ty),
-            "`lhs` and `rhs` should be the same integer type for {}",
+            "`lhs` and `rhs` should be the same integer type for '%{}'",
             inner_name
         );
         let expected_ty = match op {
@@ -327,16 +327,17 @@ impl IRBuilder {
             values::BinaryOp::Mul | values::BinaryOp::Div | values::BinaryOp::Rem |
             values::BinaryOp::And | values::BinaryOp::Or | values::BinaryOp::Xor =>
                 lhs_ty,
+            // current standard use i32 only.
             values::BinaryOp::Lt | values::BinaryOp::Gt |
             values::BinaryOp::Le | values::BinaryOp::Ge |
             values::BinaryOp::Eq | values::BinaryOp::Ne =>
-                Type::get_i1()
+                lhs_ty
         };
         let result_ty = match annotated_type {
             Some(check_ty) => {
                 assert!(
                     expected_ty.eq(&check_ty),
-                    "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                    "expect type `{}` for '%{}', but found wrong annotation `{}`", 
                     expected_ty, inner_name, check_ty
                 );
                 check_ty
@@ -363,14 +364,14 @@ impl IRBuilder {
         if let Some(check_ty) = annotated_type {
             assert!(
                 check_ty.eq(&addr_ty),
-                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                "expect type `{}` for '%{}', but found wrong annotation `{}`", 
                 addr_ty, inner_name, check_ty
             );
         }
 
         assert!(
             addr_ty.deref_matches(&base_type),
-            "element type `{}` is not compatible with input pointer in offset `{}`",
+            "element type `{}` is not compatible with input pointer in offset '%{}'",
             base_type, inner_name
         );
 
@@ -381,7 +382,7 @@ impl IRBuilder {
         assert!(
             index.iter().cloned()
                 .all(| index_ref | self.get_value(index_ref).ty.is_integer_type()),
-            "expected integer type index in offset `{}`",
+            "expected integer type index in offset '%{}'",
             inner_name
         );
 
@@ -402,7 +403,7 @@ impl IRBuilder {
             let expected_type = Type::get_pointer(base_type.clone());
             assert!(
                 check_ty.eq(&expected_type),
-                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                "expect type `{}` for '%{}', but found wrong annotation `{}`", 
                 expected_type, inner_name, check_ty
             );
         }
@@ -423,7 +424,7 @@ impl IRBuilder {
         let result_ty = if let Some(check_ty) = annotated_type {
             assert!(
                 addr_ty.deref_matches(&check_ty),
-                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                "expect type `{}` for '%{}', but found wrong annotation `{}`", 
                 addr_ty, inner_name, check_ty
             );
             check_ty
@@ -451,13 +452,13 @@ impl IRBuilder {
         if let Some(check_ty) = annotated_type {
             assert!(
                 check_ty.is_unit_type(),
-                "expect type `{}` for `{}`, but found wrong annotation `{}`", 
+                "expect type `{}` for `%{}`, but found wrong annotation `{}`", 
                 Type::get_unit(), inner_name, check_ty
             );
         }
         assert!(
             addr_ty.deref_matches(&stored_ty),
-            "in load instruction `{}`,value type `{}` and address type `{}` are incompatible", 
+            "in store instruction '%{}', value type `{}` and address type `{}` are incompatible", 
             inner_name, stored_ty, addr_ty
         );
 
@@ -554,9 +555,9 @@ impl IRBuilder {
             .value_ctx
             .get(cond)
             .unwrap();
-
-        assert!(cond_value.ty.is_i1_type(),
-                "expect condition value type `i1` in branch terminator, but found type `{}`",
+        // current branch condition requires i32 type.
+        assert!(cond_value.ty.is_i32_type(),
+                "expect condition value type `i32` in branch terminator, but found type `{}`",
                 cond_value.ty.clone());
         let current_function = self.module
             .func_ctx

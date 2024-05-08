@@ -654,6 +654,14 @@ pub fn single_step_terminator(
                     env.position = Some(inner.false_label);
                     Ok(Val::Unit)
                 },
+                Val::Integer(num) if num.clone() != 0 => {
+                    env.position = Some(inner.true_label);
+                    Ok(Val::Unit)
+                },
+                Val::Integer(num) if num.clone() == 0 => {
+                    env.position = Some(inner.false_label);
+                    Ok(Val::Unit)
+                },
                 _ => Err(ExecutionError::UnexpectedIncompatibleVal(cond.clone()))
             }
         },
