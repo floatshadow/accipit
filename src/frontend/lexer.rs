@@ -8,7 +8,7 @@ use nom::{
         char, digit0, digit1, 
         multispace0, multispace1
     },
-    combinator::{all_consuming, map_res, opt, recognize, value, cut},
+    combinator::{all_consuming, cut, map_res, opt, recognize, value},
     multi::{fold_many1, many0, many0_count, many1, separated_list0}, 
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple}, 
     Err
@@ -80,7 +80,8 @@ fn lex_keyword(input: &str) -> IResult<&str, Token> {
         alt((
             value(Token::KwFn, tag("fn")),
             value(Token::KwLet, tag("let")),
-            value(Token::KwLabel, tag("label"))
+            value(Token::KwLabel, tag("label")),
+            value(Token::KwRegion, tag("region"))
     )))(input)
 }
 
@@ -145,7 +146,8 @@ fn lex_terminator_operator(input: &str) -> IResult<&str, Token> {
         alt((
             value(Token::TkJmp,    tag("jmp")),
             value(Token::TKBranch, tag("br")),
-            value(Token::TKRet,    tag("ret"))
+            value(Token::TKRet,    tag("ret")),
+            value(Token::KwRegion, tag("region"))
         ))
     )(input)
 }

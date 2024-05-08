@@ -92,6 +92,17 @@ impl ConstantBool {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct GlobalVar {
+    pub elem_ty: Type,
+    pub size: usize
+}
+
+impl GlobalVar {
+    pub fn new_value(elem_ty: Type, size: usize) -> Value {
+        Value::new(Type::get_pointer(elem_ty.clone()), None, ValueKind::GlobalVar(Self { elem_ty, size }))
+    }
+}
 
 /* Treat the parameters of function as `Value`.
  */

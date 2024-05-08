@@ -307,7 +307,7 @@ fn @factorial(#n: i32) -> i32 {
 ### Globals
 
 ```
-global ::= <symbol> ':' 'region' <type> <int_const>
+global ::= <symbol> ':' 'region' <type> ',' <int_const>
 ```
 
 ##### 说明
@@ -321,10 +321,10 @@ global ::= <symbol> ':' 'region' <type> <int_const>
 例如：
 
 ```
-%a : region i32, 2
+@a : region i32, 2
 ```
 
-则 `%a` 为 `i32*` 类型，所指向的地址能存放 2 个 `i32` 类型的元素.
+则 `@a` 为 `i32*` 类型，所指向的地址能存放 2 个 `i32` 类型的元素.
 
 ### Comments
 

@@ -64,6 +64,7 @@ pub enum Token<'a> {
     KwFn,
     KwLet,
     KwLabel,
+    KwRegion,
     // Recovery
     Unknown
 }
@@ -119,6 +120,7 @@ impl<'a> fmt::Display for Token<'a> {
             KwFn => write!(f, "fn"),
             KwLet => write!(f, "let"),
             KwLabel => write!(f, "label"),
+            KwRegion => write!(f, "region"),
             Unknown => write!(f, "<unknown>")
         }
     }

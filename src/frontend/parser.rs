@@ -502,6 +502,24 @@ impl<'a, 'b: 'a> Parser {
         ))(input)
     }
 
+    fn parse_global_variable(
+        input: Tokens<'a>,
+        builder: Rc<RefCell<IRBuilder>>
+    ) -> IResult<Tokens<'a>, ()> {
+        // global variable: @<identifier> : region, <size>
+        let (input, (name, (elem_ty, region_size))) = pair(
+            identifier,
+            preceded(token(Token::Colon), 
+                preceded(token(Token::KwRegion), 
+                            separated_pair(parse_type, token(Token::Comma), map(i32_literal, | lit | usize::try_from(lit).expect("expect non-negative global variable region size"))))))(input)?;
+        let mut new_gv = values::GlobalVar::new_value(
+            elem_ty,
+            region_size
+        );
+        new_gv.set_name(String::from(name));
+        Ok((input, builder.borrow_mut().insert_global_symbol(new_gv)))
+    }
+
     pub fn parse_from_complete_input(
         input: Tokens<'a>,
         builder: Rc<RefCell<IRBuilder>>

@@ -27,6 +27,7 @@ pub enum ValueKind {
     Alloca(values::Alloca),
     Load(values::Load),
     Store(values::Store),
+    GlobalVar(values::GlobalVar)
 }
 
 #[derive(Debug, Clone)]
@@ -78,7 +79,9 @@ impl fmt::Display for Value {
             ValueKind::Alloca(..) | ValueKind::Load(..) | ValueKind::Store(..) =>
                 write!(f, "%{}: {}", self.name.clone().unwrap_or(String::from("<anonymous>")), self.ty),
             ValueKind::Argument(..) =>
-                write!(f, "#{}: {}", self.name.clone().unwrap_or(String::from("<anonymous>")), self.ty)
+                write!(f, "#{}: {}", self.name.clone().unwrap_or(String::from("<anonymous>")), self.ty),
+            ValueKind::GlobalVar(..) =>
+                write!(f, "@{}: {}", self.name.clone().unwrap_or(String::from("<anonymous>")), self.ty)
         }
     }
 }
@@ -273,7 +276,11 @@ impl<'a> fmt::Display for DisplayWithContext<'a, Value, Module> {
                             }
                         })
                     )
-            }
+            },
+            ValueKind::GlobalVar(inner) => {
+                write!(f, "  {} : region {}, {}\n",
+                        value, inner.elem_ty, inner.size)
+            },
             _ => panic!("invalid instruction {}", value)
         }
     }

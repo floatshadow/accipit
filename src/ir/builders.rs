@@ -57,7 +57,16 @@ impl IRBuilder {
             unwrap().
             namer;
         match base.as_ref() {
-            Some(given_name) => namer.next_name(&given_name),
+            // do not rename local value for interpreter.
+            Some(given_name) => {
+                // check duplicated name.
+                assert!(
+                    !namer.contains_name(given_name),
+                    "duplicated local value name `{}` in function `{}`",
+                    given_name, self.get_current_function_data_mut().name
+                );
+                namer.next_name(given_name)
+            }
             None => namer.next_anonymous_name()
         }
     }
@@ -68,6 +77,7 @@ impl IRBuilder {
             .unwrap()
             .local_string_value_map
             .get(name)
+            .or_else(|| self.global_string_value_map.get(name))
             .cloned()
     }
 
@@ -187,6 +197,18 @@ impl IRBuilder {
         let working_bb = self.get_current_block_data_mut();
         working_bb.insert_instr_before_terminator(handler);
         handler
+    }
+
+    pub fn insert_global_symbol(&mut self, global_variabel: Value) {
+        let global_name = global_variabel.name.clone();
+        let handler = self.insert_value(global_variabel);
+        match global_name {
+            Some(name) => {
+                self.global_string_value_map
+                    .insert(name, handler);
+            },
+            None => ()
+        }
     }
 
     pub fn get_value(&self, value_ref: ValueRef) -> Value {

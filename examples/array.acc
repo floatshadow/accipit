@@ -1,12 +1,12 @@
 
-fn %read_write_array(%array.addr: i32*) -> i32 {
+fn @read_write_array(#array.addr: i32*) -> i32 {
 %entry:
-    let %size = call %getarray, %array.addr
-    let %0 = call %putarray, %size, %array.addr
+    let %size = call %getarray, #array.addr
+    let %0 = call %putarray, %size, #array.addr
     ret %size
 }
 
-fn %main() -> () {
+fn @main() -> () {
 %0:
     let %array.addr = alloca i32, 10
     let %size = call %read_write_array, %array.addr

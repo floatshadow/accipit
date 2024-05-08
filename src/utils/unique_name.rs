@@ -23,6 +23,10 @@ impl UniqueName {
         }
     }
 
+    pub fn contains_name(&self, name: &str) -> bool {
+        self.history.contains_key(name)
+    }
+
     pub fn next_anonymous_name(&mut self) -> String {
         self.anonymous += 1;
         format!("{}", self.anonymous)
