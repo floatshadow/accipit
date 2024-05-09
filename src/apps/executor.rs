@@ -535,7 +535,8 @@ pub fn single_step(
                             std::io::stdout().flush().expect("unable to flush output stream after 'putint'");
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only", "putint".bold())))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only, but '{}' found", 
+                                                                        "putint".bold(), output_value.to_string().bold())))
                     }
                 },
                 "putch" => {
@@ -548,14 +549,16 @@ pub fn single_step(
                             std::io::stdout().flush().expect("unable to flush output stream after 'putch'");
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only","putch".bold())))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only, but '{}' found",
+                                                                        "putch".bold(), output_value.to_string().bold())))
                     }
                 },
                 "putarray" => {
                     assert!(args_val.len() == 2, "'{}' expect 2 argument", "putarray".bold());
                     let num = match &args_val[0] {
                         Val::Integer(inner) => Ok(inner.clone()),
-                        _ => Err(ExecutionError::InternalError(format!("'{}' expect integer type argument as array size", "putarray".bold())))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' expect integer type argument as array size, but '{}' found",
+                                                                        "putarray".bold(), args_val[0].clone().to_string().bold())))
                     }?;
                     print!("{}:", num);
                     let addr = args_val[1].clone();
@@ -577,7 +580,8 @@ pub fn single_step(
                             std::io::stdout().flush().expect("unable to flush output stream after 'putarray'");
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 pointer type argument only", "getarray".bold())))
+                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 pointer type argument only, but '{}' found",
+                                                                        "getarray".bold(), addr.to_string().bold())))
                     }
                 },
                 "starttime" | "stoptime" => {

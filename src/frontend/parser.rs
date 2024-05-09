@@ -169,7 +169,7 @@ impl<'a, 'b: 'a> Parser {
                 builder
                     .borrow()
                     .get_value_ref(name)
-                    .expect("undefined symbol")
+                    .unwrap_or_else(|| panic!("undefined symbol '{}'", name))
             }),
             map(parse_literal,  | value: Value| {
                 builder

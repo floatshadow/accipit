@@ -215,7 +215,7 @@ impl Module {
     pub fn get_function_ref(&self, name: &str) -> FunctionRef {
         self.string_func_map
             .get(name)
-            .unwrap()
+            .unwrap_or_else(| | panic!("function '{}' not found", name))
             .clone()
     }
 
@@ -258,7 +258,7 @@ impl<'a> fmt::Display for DisplayWithContext<'a, Value, Module> {
             ValueKind::FnCall(inner) => {
                 let callee = inner.callee.clone();
                 let args = inner.args.iter().cloned().map(| argref| module.get_value(argref));
-                write!(f, "  let {} = call {}, {}\n",
+                write!(f, "  let {} = call @{}, {}\n",
                         value, callee, args.format(", "))
             },
             ValueKind::Offset(inner) => {

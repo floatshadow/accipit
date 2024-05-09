@@ -1,0 +1,65 @@
+
+// void print_array(int a[], int len)
+// This is an optimized manually written version.
+// NOTE: The output heavily relies on the assumption that
+// multi-dimension array has a continuous memory, which is not specified in
+// our SysY standard, but rather target dependent.
+
+fn @print_array(#a: i32*, #len: i32) -> () {
+%entry:
+    let %i.addr = alloca i32, 1
+    let %0 = store 0, %i.addr
+    jmp label %while_entry
+%while_entry:
+    let %1 = load %i.addr
+    let %4 = lt %1, #len
+    br %4, label %while_body, label %while_exit
+%while_body:
+    let %i.load = load %i.addr
+    let %5 = offset i32, #a, [%i.load < none]
+    let %6 = load %5
+    let %7 = call @putint, %6
+    let %8 = call @putch, 10
+    // i = i + 1
+    let %9 = load %i.addr
+    let %10 = add %9, 1
+    let %11 = store %10, %i.addr
+    jmp label %while_entry
+%while_exit:
+    jmp label %return
+%return:
+    ret ()
+}
+
+fn @main() -> () {
+%entry:
+    // int a[4][2]
+    let %a.addr = alloca i32, 8
+    let %0 = offset i32, %a.addr, [0 < 4], [0 < 2]   
+    let %1 = store 1, %0
+    let %2 = offset i32, %a.addr, [0 < 4], [1 < 2]   
+    let %3 = store 2, %2
+    let %4 = offset i32, %a.addr, [1 < 4], [0 < 2]   
+    let %5 = store 3, %4
+    let %6 = offset i32, %a.addr, [1 < 4], [1 < 2]   
+    let %7 = store 4, %6
+    let %8 = offset i32, %a.addr, [2 < 4], [0 < 2]   
+    let %9 = store 5, %8
+    let %10 = offset i32, %a.addr, [2 < 4], [1 < 2]   
+    let %11 = store 6, %10
+    let %12 = offset i32, %a.addr, [3 < 4], [0 < 2]   
+    let %13 = store 7, %12
+    let %14 = offset i32, %a.addr, [3 < 4], [1 < 2]   
+    let %15 = store 8, %14
+    // [2 < 4], [0 < 2] can also be [4 < 8] if you like
+    // assuming the target properties mentioned above.
+    let %16 = offset i32, %a.addr, [2 < 4], [0 < 2]
+    let %17 = call @print_array, %16, 2
+    let %18 = offset i32, %a.addr, [1 < 4], [0 < 2]
+    let %19 = call @print_array, %18, 2
+    let %20 = offset i32, %a.addr, [0 < 4], [0 < 2]
+    let %21 = call @print_array, %20, 2
+    let %22 = offset i32, %a.addr, [3 < 4], [0 < 2]
+    let %23 = call @print_array, %22, 2
+    ret ()
+}
