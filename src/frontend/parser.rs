@@ -516,7 +516,8 @@ impl<'a, 'b: 'a> Parser {
             region_size
         );
         new_gv.set_name(String::from(name));
-        Ok((input, builder.borrow_mut().insert_global_symbol(new_gv)))
+        builder.borrow_mut().insert_global_symbol(new_gv);
+        Ok((input, ()))
     }
 
     pub fn parse_from_complete_input(

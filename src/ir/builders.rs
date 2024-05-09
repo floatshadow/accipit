@@ -9,7 +9,7 @@ use super::{structures::*, values};
 
 
 struct FunctionEmitState {
-    /* local variabels */
+    /* local variables */
     local_string_value_map: HashMap<String, ValueRef>,
     local_string_bb_map: HashMap<String, BlockRef>,
 
@@ -97,7 +97,7 @@ impl IRBuilder {
     }
 
     fn get_current_block_data_mut(&mut self) -> &mut BasicBlock {
-        let state = self.func
+        let state: &mut FunctionEmitState = self.func
             .as_mut()
             .expect("IR builder has no working function");
         let working_bb = state
@@ -151,6 +151,10 @@ impl IRBuilder {
         self.module.insert_value(value)
     }
 
+    fn insert_global_value(&mut self, value: Value) -> ValueRef {
+        self.module.insert_global_value(value)
+    }
+
     fn append_basic_block(&mut self, bb: BasicBlock) -> BlockRef {
         let current_function = self.get_current_function_data_mut();
         current_function.append_basic_block(bb)
@@ -197,16 +201,11 @@ impl IRBuilder {
         handler
     }
 
-    pub fn insert_global_symbol(&mut self, global_variabel: Value) {
-        let global_name = global_variabel.name.clone();
-        let handler = self.insert_value(global_variabel);
-        match global_name {
-            Some(name) => {
-                self.global_string_value_map
-                    .insert(name, handler);
-            },
-            None => ()
-        }
+    pub fn insert_global_symbol(&mut self, global_variable: Value) -> ValueRef {
+        let global_name = global_variable.name.as_ref().unwrap().clone();
+        let handler = self.insert_global_value(global_variable);
+        self.global_string_value_map.insert(global_name, handler);
+        handler
     }
 
     pub fn get_value(&self, value_ref: ValueRef) -> Value {

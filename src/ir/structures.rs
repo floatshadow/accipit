@@ -188,6 +188,12 @@ impl Module {
             .insert(value)
     }
 
+    pub fn insert_global_value(&mut self, value: Value) -> ValueRef {
+        let handler = self.insert_value(value);
+        self.globals.push(handler);
+        handler
+    }
+
     pub fn append_function(&mut self, function: Function) -> FunctionRef {
         let function_name = function.name.clone();
         let handler = self.func_ctx.insert(function);
@@ -289,6 +295,10 @@ impl<'a> fmt::Display for DisplayWithContext<'a, Value, Module> {
 
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for gvref in self.globals.iter() {
+            let global_var = self.get_value(gvref.clone());
+            write!(f, "{}\n\n", global_var)?;
+        }
         for funcref in self.funcs.iter() {
             let function = self
                 .func_ctx
@@ -298,7 +308,7 @@ impl fmt::Display for Module {
                 .iter()
                 .map(| arg_ref | self.get_value(arg_ref.clone()) )
                 .collect::<Vec<_>>();
-            write!(f, "fn %{}({}) -> {} ",
+            write!(f, "fn @{}({}) -> {}",
                     function.name,
                     param_val.iter().format(", "),
                     function.ty.get_function_ret_type().unwrap()
@@ -306,7 +316,7 @@ impl fmt::Display for Module {
             if function.is_external {
                 write!(f, ";\n\n")?;
             } else {
-                write!(f, "{{\n")?;
+                write!(f, " {{\n")?;
                 for bb_ref in function.blocks.iter() {
                     let basic_block = function
                         .blocks_ctx
