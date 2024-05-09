@@ -1,0 +1,117 @@
+
+/*
+int if_ifElse_() {
+  int a;
+  a = 5;
+  int b;
+  b = 10;
+  if(a == 5){
+    if (b == 10) 
+      a = 25;
+    else 
+      a = a + 15;
+  }
+  return (a);
+}
+*/
+
+fn @if_ifElse_() -> i32 {
+%entry:
+    let %ret.addr = alloca i32, 1
+    // int a;
+    let %0 = alloca i32, 1
+    let %1 = store 5, %0
+    // int b;
+    let %2 = alloca i32, 1
+    let %3 = store 10, %2
+    // a == 5
+    let %4 = load %0
+    let %5 = eq %4, 5
+    br %5, label %outer_if_true, label %outer_if_exit
+%outer_if_true:
+    // b == 10
+    let %6 = load %2
+    let %7 = eq %6, 10
+    br %7, label %inner_if_true, label %inner_if_false
+%inner_if_true:
+    let %8 = store 25, %0
+    jmp label %inner_if_exit
+%inner_if_false:
+    let %9 = load %0
+    let %10 = add %9, 15
+    let %11 = store %10, %0
+    jmp label %inner_if_exit
+%inner_if_exit:
+    jmp label %outer_if_exit
+%outer_if_exit:
+    let %12 = load %0
+    let %13 = store %12, %ret.addr
+    jmp label %ret_bb
+%ret_bb:
+    let %14 = load %ret.addr
+    ret %14
+}
+
+/*
+int if_if_Else() {
+  int a;
+  a = 5;
+  int b;
+  b = 10;
+  if(a == 5){
+    if (b == 10) 
+      a = 25;
+  }
+  else 
+      a = a + 15;
+  return (a);
+}
+*/
+
+fn @if_if_Else() -> i32 {
+%entry:
+    let %ret.addr = alloca i32, 1
+    // int a;
+    let %0 = alloca i32, 1
+    let %1 = store 5, %0
+    // int b;
+    let %2 = alloca i32, 1
+    let %3 = store 10, %2
+    // a == 5
+    let %4 = load %0
+    let %5 = eq %4, 5
+    br %5, label %outer_if_true, label %outer_if_false
+%outer_if_true:
+    // b == 10
+    let %6 = load %2
+    let %7 = eq %6, 10
+    br %7, label %inner_if_true, label %inner_if_exit
+%inner_if_true:
+    let %8 = store 25, %0
+    jmp label %inner_if_exit
+%inner_if_exit:
+    jmp label %outer_if_exit
+%outer_if_false:
+    let %9 = load %0
+    let %10 = add %9, 15
+    let %11 = store %10, %0
+    jmp label %outer_if_exit
+%outer_if_exit:
+    let %12 = load %0
+    let %13 = store %12, %ret.addr
+    jmp label %ret_bb
+%ret_bb:
+    let %14 = load %ret.addr
+    ret %14
+}
+
+fn @main() -> () {
+%entry:
+    let %0 = call @if_ifElse_
+    let %1 = call @putint, %0
+    let %2 = call @putch, 10
+    let %3 = call @if_if_Else
+    let %4 = call @putint, %3
+    let %5 = call @putch, 10
+    ret ()
+}

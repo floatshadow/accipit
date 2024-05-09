@@ -68,6 +68,8 @@ impl fmt::Display for ExecutionError {
             Self::ReturnDanglingPointer(value) => {
                 write!(f, "try to returns a dangling pointer '{}'", value.to_string().bold())
             },
+            Self::UnexpectedIncompatibleVal(val) =>
+                write!(f, "unexpected incompatible value '{}'", val.to_string().bold()),
             Self::LexerError => write!(f, "lexing error"),
             Self::ParseError => write!(f, "parsing error"),
             _ => unreachable!()
