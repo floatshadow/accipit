@@ -501,9 +501,10 @@ pub fn single_step(
             let total_offset: usize = indices
                 .into_iter().zip(inner.bounds.iter().cloned().skip(1).chain(last_dim_subdim.into_iter()))
                 .fold(0usize, | acc, (index, next_dim_bound) | {
-                    acc + index * next_dim_bound.expect("expected bounded dimension in `Offset`")
+                    (acc + index) * next_dim_bound.expect("expected bounded dimension in `Offset`")
                 });
-            
+            // println!("offset: {}\n", total_offset);
+
             let memory_object = match base_addr_val {
                 Val::Pointer(memory_object) => Ok(memory_object.clone()),
                 _ => Err(exec_error!(ExecutionErrorInternal::TypeMismatch(base_addr_value.clone(), base_addr_val.clone()), function.name.clone(), value_data_name.clone()))
