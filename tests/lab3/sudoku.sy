@@ -129,6 +129,7 @@ int main() {
             a[i][j] = getint();
             if (a[i][j] < 0 || a[i][j] > 9) {
                 putint(0);
+                putch(32);
                 return 0;
             } else if (a[i][j] == 0) {
                 solve = 1;
@@ -145,17 +146,21 @@ int main() {
                 j = 0;
                 while (j < 9) {
                     putint(a[i][j]);
+                    putch(32);
                     j = j + 1;
                 }
                 i = i + 1;
             }
         } else {
             putint(0);
+            putch(32);
         }
     } else if (check_sudoku(a)) {
         putint(1);
+        putch(32);
     } else {
         putint(0);
+        putch(32);
     }
 
     return 0;

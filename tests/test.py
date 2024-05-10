@@ -79,7 +79,6 @@ class TestResult:
                 self.passed = exit_code == 0
             else:
                 if not concat_output:  # lab3
-                    print(output, test.expected)
                     self.passed = exit_code == 0 and output == test.expected
                 else:  # lab4
                     expected = "".join(test.expected)

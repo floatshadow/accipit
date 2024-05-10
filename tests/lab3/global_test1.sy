@@ -7,8 +7,6 @@ int c[4][3];
 int i = 2024;
 
 int main() {
-    a = 0;
-    
     while (a < 2) {
         b[a] = a * 2;
         a = a + 1;

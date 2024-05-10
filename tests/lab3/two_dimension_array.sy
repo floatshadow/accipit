@@ -43,8 +43,11 @@ int main() {
   }
 
   putint(mat[0][3]);
+  putch(32);
   putint(mat[1][2]);
+  putch(32);
   putint(mat[2][1]);
+  putch(32);
   putint(mat[3][0]);
 
   return 0;

@@ -22,6 +22,7 @@ int main() {
   int n = getint();
   int k = getint();
   putint(cal_combiniation(n, k));
+  putch(32);
   putint(cal_permutation(n, k));  
   return 0;
 }
