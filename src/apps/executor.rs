@@ -5,6 +5,7 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 use crate::ir::{
+    types::TypeKind,
     values,
     structures::*
 };
@@ -17,8 +18,8 @@ use slotmap::SecondaryMap;
 use libc::*;
 use colored::Colorize;
 
-#[derive(Debug)]
-pub enum ExecutionError {
+#[derive(Debug, Clone)]
+pub enum ExecutionErrorInternal {
     SymbolNotFound(String),
     TypeMismatch(Value, Val),
     OffsetInvalidIndex(Value, Val, Option<usize>),
@@ -36,18 +37,49 @@ pub enum ExecutionError {
     ParseError
 }
 
+#[derive(Debug, Clone)]
+pub struct ExecutionError {
+    // context of execution error.
+    pub function: String,
+    pub value: String,
+    // error internal.
+    pub error: ExecutionErrorInternal
+}
+
+macro_rules! exec_error {
+    ($error: expr, $function: expr, $value: expr) => {
+        ExecutionError {
+            function: $function,
+            value: $value,
+            error: $error
+        }
+    }
+}
+
+macro_rules! insepct_exec_error {
+    ($result: expr, $function: expr, $value: expr) => {
+        match $result {
+            Ok(val) => Ok(val),
+            Err(err) => Err(exec_error!(err, $function, $value))
+        }
+    }
+
+}
+
 impl fmt::Display for ExecutionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", "error: ".red().bold())?;
-        match self {
-            Self::SymbolNotFound(s) =>
+        write!(f, "{} in function '{}' with value '{}'\n",
+                    "error: ".red().bold(), self.function.bold(), self.value.bold())?;
+        use ExecutionErrorInternal::*;
+        match &self.error {
+            SymbolNotFound(s) =>
                 write!(f, "'{}' symbol not found", s.bold()),
-            Self::TypeMismatch(value, val) =>
-                write!(f, "the type of value '{}' is incompatiable with input '{}'",
+            TypeMismatch(value, val) =>
+                write!(f, "the type of the value '{}' is incompatiable with input '{}'",
                         value.to_string().bold(), val.to_string().bold()),
-            Self::InvalidInputArguments(s) =>
+            InvalidInputArguments(s) =>
                 write!(f, "invalid input argument '{}'", s.bold()),
-            Self::OffsetInvalidIndex(offset, index, bound) => {
+            OffsetInvalidIndex(offset, index, bound) => {
                 match bound {
                     Some(bound) =>
                         write!(f, "in offset '{}', index ['{}' < '{}'] is invalid",
@@ -57,21 +89,22 @@ impl fmt::Display for ExecutionError {
                                 offset.to_string().bold(), index.to_string().bold(), "none".bold()),
                 }
             },
-            Self::OffsetExceedMemoryRegion(offset) =>
+            OffsetExceedMemoryRegion(offset) =>
                 write!(f, "offset '{}' exceeded memory bound", offset.to_string().bold()),
-            Self::InternalError(s) =>
+            InternalError(s) =>
                 write!(f, "internal function error {}", s),
-            Self::FunctionNumArgumentMismatch(name, param) => {
+            FunctionNumArgumentMismatch(name, param) => {
                 writeln!(f, "function '{}' get inconsistent number of arguments with its parameter list", name.bold())?;
                 write!(f, "    input params '[{}]'", param.iter().format_with(", ", | elem, f | f(&format_args!("{}", elem.to_string().bold()))))
             },
-            Self::ReturnDanglingPointer(value) => {
+            ReturnDanglingPointer(value) => {
                 write!(f, "try to returns a dangling pointer '{}'", value.to_string().bold())
             },
-            Self::UnexpectedIncompatibleVal(val) =>
+            UnexpectedIncompatibleVal(val) =>
                 write!(f, "unexpected incompatible value '{}'", val.to_string().bold()),
-            Self::LexerError => write!(f, "lexing error"),
-            Self::ParseError => write!(f, "parsing error"),
+            
+            LexerError => write!(f, "lexing error"),
+            ParseError => write!(f, "parsing error"),
             _ => unreachable!()
         }
     }
@@ -137,7 +170,8 @@ impl FromStr for Val {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let int_value = s.parse::<i32>()
-            .map_err(| _ | ExecutionError::InvalidInputArguments(format!("{}", s.bold())))?;
+            .map_err(| _ | exec_error!(ExecutionErrorInternal::InvalidInputArguments(format!("{}", s.bold())), 
+                                        "<global frame>".to_string(), "<parse input>".to_string()))?;
 
         Ok(Val::Integer(int_value))
     }
@@ -175,97 +209,96 @@ impl<'a> fmt::Display for DisplayWithContext<'a, Val, Module> {
 
 impl Val {
     pub fn compute_binary(
-        module: &Module,
         op: values::BinaryOp,
         lhs: &Val,
         rhs: &Val
-    ) -> Result<Val, ExecutionError> {
+    ) -> Result<Val, ExecutionErrorInternal> {
         match op {
             values::BinaryOp::Add => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 + val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Sub => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 - val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },     
             values::BinaryOp::Mul => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 * val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Div => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 / val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Rem => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 % val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::And => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 & val2)),
                     (Val::Bool(val1), Val::Bool(val2)) => Ok(Val::Bool(val1 & val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Or => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 | val2)),
                     (Val::Bool(val1), Val::Bool(val2)) => Ok(Val::Bool(val1 | val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Xor => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer(val1 ^ val2)),
                     (Val::Bool(val1), Val::Bool(val2)) => Ok(Val::Bool(val1 ^ val2)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Lt => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 < val2) as i32)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Gt => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 > val2) as i32)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Le => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 <= val2) as i32)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Ge => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 >= val2) as i32)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Eq => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 == val2) as i32)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Ne => {
                 match (lhs, rhs) {
                     (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 != val2) as i32)),
-                    _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
+                    _ => Err(ExecutionErrorInternal::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             }
         }
@@ -273,7 +306,7 @@ impl Val {
 }
 
 impl Val {
-    pub fn matches_value(self, value: &Value) -> Result<Val, ExecutionError> {
+    pub fn matches_value(self, value: &Value) -> Result<Val, ExecutionErrorInternal> {
         if match &self {
             Val::Integer(..) => value.ty.is_i32_type(),
             Val::Bool(..) => value.ty.is_i1_type(),
@@ -284,7 +317,7 @@ impl Val {
         } {
             Ok(self)
         } else {
-            Err(ExecutionError::TypeMismatch(value.clone(), self))
+            Err(ExecutionErrorInternal::TypeMismatch(value.clone(), self))
         }
     }
 }
@@ -389,6 +422,12 @@ impl ProgramEnv {
         let frame_index = self.get_num_frames();
         self.memory.insert((ptr, frame_index), unitialized_object);
     }
+
+    pub fn initialize_memory_with(&mut self, ptr: ValueRef, size: usize, init_val: Val) {
+        let initialized_object = vec![init_val; size];
+        let frame_index = self.get_num_frames();
+        self.memory.insert((ptr, frame_index), initialized_object);
+    }
 }
 
 impl ProgramEnv {
@@ -407,22 +446,26 @@ impl ProgramEnv {
 pub fn single_step(
     env: &mut ProgramEnv,
     module: &Module,
-    value: ValueRef 
+    function: &Function,
+    value: ValueRef,
 ) -> Result<Val, ExecutionError> {
-    let value_data = module.get_value(value);
     // println!("single step on `{}`", value_data);
+    let value_data = module.get_value(value);
+    let value_data_name = value_data.name.clone().unwrap_or("<anonymous>".to_string());
     match &value_data.kind {
         ValueKind::Binary(inner) => {
             let lhs = env.get_val(inner.lhs);
             let rhs = env.get_val(inner.rhs);
-            Val::compute_binary(module, inner.op.clone(), lhs, rhs)
+            insepct_exec_error!(Val::compute_binary(inner.op.clone(), lhs, rhs),
+                                function.name.clone(), value_data_name)
         },
         ValueKind::Offset(inner) => {
             let base_addr_value = module.get_value(inner.base_addr);
             let base_addr_val = env
                 .get_val(inner.base_addr)
                 .clone()
-                .matches_value(base_addr_value)?;
+                .matches_value(base_addr_value)
+                .map_err(| err | exec_error!(err, function.name.clone(), value_data_name.clone()))?;
             
             // bound checking
             let indices: Vec<usize> = inner.index
@@ -437,16 +480,18 @@ pub fn single_step(
                                     Ok(converted_index),
                                 (Ok(converted_index), None) =>
                                     Ok(converted_index),
-                                _ => Err(ExecutionError::OffsetInvalidIndex(
-                                    module.get_value(index).clone(),
-                                    index_val.clone(),
-                                    bound
-                                ))
+                                _ => Err(exec_error!(ExecutionErrorInternal::OffsetInvalidIndex(
+                                                        module.get_value(index).clone(),
+                                                        index_val.clone(),
+                                                        bound
+                                                    ),
+                                                    function.name.clone(), value_data_name.clone()))
                             }
                         },
-                        _ => Err(ExecutionError::TypeMismatch(
-                                module.get_value(index).clone(),
-                                index_val.clone()))
+                        _ => Err(exec_error!(ExecutionErrorInternal::TypeMismatch(
+                                                module.get_value(index).clone(),
+                                                index_val.clone()),
+                                            function.name.clone(), value_data_name.clone()))
                     }
                 })
                 .collect::<Result<_, _>>()?;
@@ -461,10 +506,10 @@ pub fn single_step(
             
             let memory_object = match base_addr_val {
                 Val::Pointer(memory_object) => Ok(memory_object.clone()),
-                _ => Err(ExecutionError::TypeMismatch(base_addr_value.clone(), base_addr_val.clone()))
+                _ => Err(exec_error!(ExecutionErrorInternal::TypeMismatch(base_addr_value.clone(), base_addr_val.clone()), function.name.clone(), value_data_name.clone()))
             }?;
             MemoryObject::try_from_offset(&memory_object, total_offset)
-                .map_or_else(| | Err(ExecutionError::OffsetExceedMemoryRegion(value_data.clone())),
+                .map_or_else(| | Err(exec_error!(ExecutionErrorInternal::OffsetExceedMemoryRegion(value_data.clone()), function.name.clone(), value_data_name.clone())),
                 | memory_obj | Ok(Val::Pointer(memory_obj)))
         },
         ValueKind::FnCall(inner) => {
@@ -524,7 +569,7 @@ pub fn single_step(
                             }
                             Ok(Val::Integer(n))
                         },
-                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 pointer type argument only", "getarray".bold())))
+                        _ => Err(exec_error!(ExecutionErrorInternal::InternalError(format!("'{}' accepts 1 pointer type argument only", "getarray".bold())), function.name.clone(), value_data_name.clone()))
                     }
                 },
                 "putint" => {
@@ -537,8 +582,8 @@ pub fn single_step(
                             std::io::stdout().flush().expect("unable to flush output stream after 'putint'");
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only, but '{}' found", 
-                                                                        "putint".bold(), output_value.to_string().bold())))
+                        _ => Err(exec_error!(ExecutionErrorInternal::InternalError(format!("'{}' accepts 1 integer type argument only, but '{}' found", 
+                                "putint".bold(), output_value.to_string().bold())), function.name.clone(), value_data_name.clone()))
                     }
                 },
                 "putch" => {
@@ -551,16 +596,16 @@ pub fn single_step(
                             std::io::stdout().flush().expect("unable to flush output stream after 'putch'");
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 integer type argument only, but '{}' found",
-                                                                        "putch".bold(), output_value.to_string().bold())))
+                        _ => Err(exec_error!(ExecutionErrorInternal::InternalError(format!("'{}' accepts 1 integer type argument only, but '{}' found",
+                            "putch".bold(), output_value.to_string().bold())), function.name.clone(), value_data_name.clone()))
                     }
                 },
                 "putarray" => {
                     assert!(args_val.len() == 2, "'{}' expect 2 argument", "putarray".bold());
                     let num = match &args_val[0] {
                         Val::Integer(inner) => Ok(inner.clone()),
-                        _ => Err(ExecutionError::InternalError(format!("'{}' expect integer type argument as array size, but '{}' found",
-                                                                        "putarray".bold(), args_val[0].clone().to_string().bold())))
+                        _ => Err(exec_error!(ExecutionErrorInternal::InternalError(format!("'{}' expect integer type argument as array size, but '{}' found",
+                                "putarray".bold(), args_val[0].clone().to_string().bold())), function.name.clone(), value_data_name.clone()))
                     }?;
                     print!("{}:", num);
                     let addr = args_val[1].clone();
@@ -582,8 +627,8 @@ pub fn single_step(
                             std::io::stdout().flush().expect("unable to flush output stream after 'putarray'");
                             Ok(Val::Unit)
                         },
-                        _ => Err(ExecutionError::InternalError(format!("'{}' accepts 1 pointer type argument only, but '{}' found",
-                                                                        "getarray".bold(), addr.to_string().bold())))
+                        _ => Err(exec_error!(ExecutionErrorInternal::InternalError(format!("'{}' accepts 1 pointer type argument only, but '{}' found",
+                                "getarray".bold(), addr.to_string().bold())), function.name.clone(), value_data_name.clone()))
                     }
                 },
                 "starttime" | "stoptime" => {
@@ -621,7 +666,8 @@ pub fn single_step(
             let addr_val = env.get_val(inner.addr);
             let ptr = match addr_val {
                 Val::Pointer(inner) => Ok(inner.clone()),
-                _ => Err(ExecutionError::TypeMismatch(addr_value.clone(), addr_val.clone()))
+                _ => Err(exec_error!(ExecutionErrorInternal::TypeMismatch(addr_value.clone(), addr_val.clone()), 
+                                    function.name.clone(), value_data_name))
             }?;
 
             let region = env.get_memory(ptr.base, ptr.frame_index);
@@ -632,20 +678,23 @@ pub fn single_step(
             let addr_val = env.get_val(inner.addr);
             let ptr = match addr_val {
                 Val::Pointer(inner) => Ok(inner.clone()),
-                _ => Err(ExecutionError::TypeMismatch(addr_value.clone(), addr_val.clone()))
+                _ => Err(exec_error!(ExecutionErrorInternal::TypeMismatch(addr_value.clone(), addr_val.clone()),
+                                    function.name.clone(), value_data_name))
             }?;
             let value_stored = env.get_val(inner.value).clone();
             let region = env.get_memory_mut(ptr.base, ptr.frame_index);
             region[ptr.offset_within] = value_stored;
             Ok(Val::Unit)
         }
-        _ => Err(ExecutionError::NotImplemented(String::from("Expected Instruction")))
+        _ => Err(exec_error!(ExecutionErrorInternal::NotImplemented(String::from("Expected Instruction")),
+                            function.name.clone(), value_data_name))
     }
 }
 
 pub fn single_step_terminator(
     env: &mut ProgramEnv,
     module: &Module,
+    function: &Function,
     term: &Terminator
 ) -> Result<Val, ExecutionError> {
     match &term {
@@ -668,7 +717,8 @@ pub fn single_step_terminator(
                     env.position = Some(inner.false_label);
                     Ok(Val::Unit)
                 },
-                _ => Err(ExecutionError::UnexpectedIncompatibleVal(cond.clone()))
+                _ => Err(exec_error!(ExecutionErrorInternal::UnexpectedIncompatibleVal(cond.clone()),
+                                    function.name.clone(), "<branch terminator>".to_string()))
             }
         },
         Terminator::Jump(inner) => {
@@ -682,15 +732,16 @@ pub fn single_step_terminator(
             // check dangling pointer
             match &ret_val {
                 Val::Pointer(mem) if mem.frame_index > env.frames.len() => {
-                    Err(ExecutionError::ReturnDanglingPointer(
-                        module.get_value(inner.value).clone())
-                    )
+                    Err(exec_error!(ExecutionErrorInternal::ReturnDanglingPointer(
+                        module.get_value(inner.value).clone()), function.name.clone(), "<return terminator>".to_string()
+                    ))
                 }
                 _ => Ok(ret_val.clone())
             }
         },
         Terminator::Panic => {
-            Err(ExecutionError::StuckInPanic)
+            Err(exec_error!(ExecutionErrorInternal::StuckInPanic, 
+                            function.name.clone(), "<panic terminator>".to_string()))
         }
     }
 }
@@ -698,14 +749,15 @@ pub fn single_step_terminator(
 pub fn run_on_basicblock(
     env: &mut ProgramEnv,
     module: &Module,
+    function: &Function,
     block: &BasicBlock
 ) -> Result<Val, ExecutionError> {
     for instr in block.instrs.iter().cloned() {
         env.program_counter = Some(instr);
-        let val = single_step(env, module, instr)?;
+        let val = single_step(env, module, function, instr)?;
         env.set_value_binding(instr, val);
     };
-    single_step_terminator(env, module, &block.terminator)
+    single_step_terminator(env, module, function, &block.terminator)
 }
 
 pub fn run_on_function(
@@ -718,13 +770,16 @@ pub fn run_on_function(
     let function = module.get_function(function);
     // set args values
     if function.args.len() != args.len() {
-        return Err(ExecutionError::FunctionNumArgumentMismatch(function.name.clone(), args));
+        return Err(exec_error!(ExecutionErrorInternal::FunctionNumArgumentMismatch(function.name.clone(), args),
+                            function.name.clone(), "<function prologue>".to_string()));
     }
     let params: Vec<Val> = args
         .into_iter().zip(function.args.iter().cloned())
         .map( | (arg, param) | {
             let value = module.get_value(param);
             arg.matches_value(value)
+                .map_err(| err |
+                    exec_error!(err, function.name.clone(), value.name.clone().unwrap_or("<anonymous>".to_string())))
         } )
         .collect::<Result<_, _>>()?;
 
@@ -739,7 +794,7 @@ pub fn run_on_function(
     while let Some(current_bb) = env.position {
         env.position = Some(current_bb);
         let block = function.get_basic_block(current_bb);
-        bb_exit_val = run_on_basicblock(env, module, block)?;
+        bb_exit_val = run_on_basicblock(env, module, function, block)?;
     };
     env.epilogue();
     Ok(bb_exit_val)
@@ -788,8 +843,21 @@ pub fn run_on_module(
                         offset_within: 0,
                         size: inner.size
                     }));
-                    // allocate memory
-                    env.initialize_memory(value, inner.size);
+                    // allocate memory, initialize to default '0' values
+                    let type_kind: &TypeKind = &inner.elem_ty;
+                    let init_val = match type_kind {
+                        TypeKind::Int32 => Val::Integer(0),
+                        TypeKind::Int1 => Val::Bool(false),
+                        TypeKind::Pointer(_) => Val::Pointer(MemoryObject {
+                            frame_index: 0,
+                            function: phantom_function_ref,
+                            base: value,
+                            offset_within: 0,
+                            size: 0
+                        }),
+                        _ => Val::Undefined
+                    };
+                    env.initialize_memory_with(value, inner.size, init_val);
                 },
                 _ => (),
             };
