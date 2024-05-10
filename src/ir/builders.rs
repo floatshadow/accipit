@@ -127,6 +127,7 @@ impl IRBuilder {
         match possible_bb {
             Some(bb_ref) => bb_ref,
             None => {
+                // println!("insert forwarding reference bb: %{}\n", name);
                 let mut placeholder_bb = BasicBlock::new();
                 placeholder_bb.set_name(Some(name.into()));
                 // only insert symbol not push into the function structure.
@@ -155,17 +156,13 @@ impl IRBuilder {
         self.module.insert_global_value(value)
     }
 
-    fn append_basic_block(&mut self, bb: BasicBlock) -> BlockRef {
-        let current_function = self.get_current_function_data_mut();
-        current_function.append_basic_block(bb)
-    }
-
     /// get the handler of value and update local symbol value map
     fn insert_local_value_symbol(&mut self, value: Value) -> ValueRef {
         let value_name = value.name.clone();
         let handler = self.insert_value(value);
         match value_name {
             Some(name) => {
+            // println!("inesrt local symbol: %{}\n", name);
                 self.func
                     .as_mut()
                     .expect("builder has no working function")
@@ -173,23 +170,6 @@ impl IRBuilder {
                     .insert(name, handler);
                 handler
             }
-            None => handler
-        }
-    }
-
-    /// get the handler of basic block and update local symbol value map
-    fn append_basic_block_symbol(&mut self, bb: BasicBlock) -> BlockRef {
-        let bb_name = bb.name.clone();
-        let handler = self.append_basic_block(bb.clone());
-        match bb_name {
-            Some(name) => {
-                self.func
-                    .as_mut()
-                    .expect("builder has no working function")
-                    .local_string_bb_map
-                    .insert(name, handler);
-                handler
-            },
             None => handler
         }
     }
@@ -284,6 +264,9 @@ impl IRBuilder {
 
         match name {
             Some(ref bb_name) => {
+                // is a forwarding reference dangling basic block.
+                // println!("emit basic block `%{}`\n", bb_name);
+                let handler = 
                 if let Some(dangling_bb_ref) = self.get_block_ref(bb_name) {
                     // println!("find dangling basic block `%{}`\n", bb_name);
                     let current_function = self.get_current_function_data_mut();
@@ -295,7 +278,15 @@ impl IRBuilder {
                     let mut new_bb = BasicBlock::new();
                     new_bb.set_name(Some(name));
                     current_function.append_basic_block(new_bb)
-                }
+                };
+                // always update basic block symbols
+                self.func
+                    .as_mut()
+                    .expect("builder has no working function")
+                    .local_string_bb_map
+                    .insert(bb_name.clone(), handler);
+                handler
+
             },
             None => {
                 let name = self.get_unique_name(&name);

@@ -87,7 +87,7 @@ fn main() -> Result<(), ()>{
             println!("{}", interpreted_err);
         })
         .map_err(| _ | ())?;
-    // println!("{}", interpreted);
+    eprintln!("\n\ninterpreter: {}", interpreted);
     Ok(())
 
 }
