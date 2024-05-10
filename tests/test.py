@@ -79,6 +79,7 @@ class TestResult:
                 self.passed = exit_code == 0
             else:
                 if not concat_output:  # lab3
+                    print(output, test.expected)
                     self.passed = exit_code == 0 and output == test.expected
                 else:  # lab4
                     expected = "".join(test.expected)
@@ -119,6 +120,7 @@ def run_one_test(compiler: str, test: Test, lab: str, local: bool) -> TestResult
             with subprocess.Popen([EXECUTOR_PATH, ir_file_name],
                                   stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL,
                                   text=True) as p:
                 try:
                     if test.inputs is not None:
@@ -128,6 +130,8 @@ def run_one_test(compiler: str, test: Test, lab: str, local: bool) -> TestResult
                         outputs, _ = p.communicate(timeout=TIMEOUT)
                     outputs = outputs.strip().split("\n")
                     returnvalue = p.returncode
+                    if isinstance(outputs, list):
+                        outputs = outputs[0].split()
                     return TestResult(test, outputs, returnvalue)
                 except subprocess.TimeoutExpired:
                     p.kill()

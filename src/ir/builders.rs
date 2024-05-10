@@ -263,20 +263,20 @@ impl IRBuilder {
     pub fn emit_basic_block(&mut self, name: Option<String>) -> BlockRef {
 
         match name {
-            Some(ref bb_name) => {
+            Some(_) => {
                 // is a forwarding reference dangling basic block.
                 // println!("emit basic block `%{}`\n", bb_name);
+                let name = self.get_unique_name(&name);
                 let handler = 
-                if let Some(dangling_bb_ref) = self.get_block_ref(bb_name) {
+                if let Some(dangling_bb_ref) = self.get_block_ref(&name) {
                     // println!("find dangling basic block `%{}`\n", bb_name);
                     let current_function = self.get_current_function_data_mut();
                     current_function.append_back_dangling_basic_block(dangling_bb_ref);
                     dangling_bb_ref
                 } else {
-                    let name = self.get_unique_name(&name);
                     let current_function = self.get_current_function_data_mut();
                     let mut new_bb = BasicBlock::new();
-                    new_bb.set_name(Some(name));
+                    new_bb.set_name(Some(name.clone()));
                     current_function.append_basic_block(new_bb)
                 };
                 // always update basic block symbols
@@ -284,7 +284,7 @@ impl IRBuilder {
                     .as_mut()
                     .expect("builder has no working function")
                     .local_string_bb_map
-                    .insert(bb_name.clone(), handler);
+                    .insert(name.clone(), handler);
                 handler
 
             },
@@ -496,8 +496,8 @@ impl IRBuilder {
                 assert!(
                     params_ty.iter().zip(args_value.iter())
                     .all( | (param_ty, arg_value) | param_ty.eq(&arg_value.ty)),
-                    "function call `{}` has different argument type with function prototyp `{}`",
-                    inner_name, callee
+                    "function call `{}` has different argument type with function prototyp `{}`, where argument types are {:?} and function prototype types are {:?}",
+                    inner_name, callee, args_value.iter().map(| arg | arg.ty.clone()).collect::<Vec<_>>(), params_ty
                 );
                 ret_ty
             }

@@ -302,11 +302,13 @@ impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for gvref in self.globals.iter() {
             let global_var = self.get_value(gvref.clone());
+            let name = global_var.name.clone().unwrap();
+            let ty = Type::get_pointer_base_type(&global_var.ty).unwrap();
             let size = match &global_var.kind {
                 ValueKind::GlobalVar(inner) => inner.size,
                 _ => panic!("invalid global variable")
             };
-            write!(f, "{}; /* size = {} */ \n\n", global_var, size)?;
+            write!(f, "@{}: region {}, {} \n\n", name, ty, size)?;
         }
         for funcref in self.funcs.iter() {
             let function = self
