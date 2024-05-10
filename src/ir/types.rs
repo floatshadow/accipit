@@ -33,7 +33,7 @@ impl fmt::Display for TypeKind {
             TypeKind::Int32 => write!(f, "i32"),
             TypeKind::Int1 => write!(f, "i1"),
             TypeKind::Unit => write!(f, "()"),
-            TypeKind::Pointer(base_type) => write!(f, "*{}", base_type),
+            TypeKind::Pointer(base_type) => write!(f, "{}*", base_type),
             TypeKind::OpaquePtr => write!(f, "ptr"),
             TypeKind::Function(params_type, res_type) => {
                 for param_type in params_type.iter() {

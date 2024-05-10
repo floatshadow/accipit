@@ -58,11 +58,11 @@ impl IRBuilder {
             // do not rename local value for interpreter.
             Some(given_name) => {
                 // check duplicated name.
-                assert!(
-                    !namer.contains_name(given_name),
-                    "duplicated local value name `{}` in function `{}`",
-                    given_name, self.get_current_function_data_mut().name
-                );
+                // assert!(
+                //     !namer.contains_name(given_name),
+                //     "duplicated local value name `{}` in function `{}`",
+                //     given_name, self.get_current_function_data_mut().name
+                // );
                 namer.next_name(given_name)
             }
             None => namer.next_anonymous_name()
@@ -283,23 +283,25 @@ impl IRBuilder {
     pub fn emit_basic_block(&mut self, name: Option<String>) -> BlockRef {
 
         match name {
-            Some(bb_name) => {
-                if let Some(dangling_bb_ref) = self.get_block_ref(&bb_name) {
+            Some(ref bb_name) => {
+                if let Some(dangling_bb_ref) = self.get_block_ref(bb_name) {
                     // println!("find dangling basic block `%{}`\n", bb_name);
                     let current_function = self.get_current_function_data_mut();
                     current_function.append_back_dangling_basic_block(dangling_bb_ref);
                     dangling_bb_ref
                 } else {
+                    let name = self.get_unique_name(&name);
                     let current_function = self.get_current_function_data_mut();
                     let mut new_bb = BasicBlock::new();
-                    new_bb.set_name(Some(bb_name));
+                    new_bb.set_name(Some(name));
                     current_function.append_basic_block(new_bb)
                 }
             },
             None => {
+                let name = self.get_unique_name(&name);
                 let current_function = self.get_current_function_data_mut();
                 let mut new_bb = BasicBlock::new();
-                new_bb.set_name(name);
+                new_bb.set_name(Some(name));
                 current_function.append_basic_block(new_bb)
             }
         }
@@ -318,8 +320,8 @@ impl IRBuilder {
         let inner_name = self.get_unique_name(&name);
         assert!(
             lhs_ty.is_integer_type() && lhs_ty.eq(&rhs_ty),
-            "`lhs` and `rhs` should be the same integer type for '%{}'",
-            inner_name
+            "`lhs` and `rhs` should be the same integer type for '%{}', where lhs type `{}` and rhs type `{}`",
+            inner_name, lhs_ty, rhs_ty
         );
         let expected_ty = match op {
             values::BinaryOp::Add | values::BinaryOp::Sub |

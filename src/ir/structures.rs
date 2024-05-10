@@ -264,8 +264,13 @@ impl<'a> fmt::Display for DisplayWithContext<'a, Value, Module> {
             ValueKind::FnCall(inner) => {
                 let callee = inner.callee.clone();
                 let args = inner.args.iter().cloned().map(| argref| module.get_value(argref));
-                write!(f, "  let {} = call @{}, {}\n",
-                        value, callee, args.format(", "))
+                if inner.args.len() == 0 {
+                    write!(f, "  let {} = call @{}\n",
+                            value, callee)
+                } else {
+                    write!(f, "  let {} = call @{}, {}\n",
+                            value, callee, args.format(", "))
+                }
             },
             ValueKind::Offset(inner) => {
                 let elem_type = inner.elem_type.clone();
@@ -297,7 +302,11 @@ impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for gvref in self.globals.iter() {
             let global_var = self.get_value(gvref.clone());
-            write!(f, "{}\n\n", global_var)?;
+            let size = match &global_var.kind {
+                ValueKind::GlobalVar(inner) => inner.size,
+                _ => panic!("invalid global variable")
+            };
+            write!(f, "{}; /* size = {} */ \n\n", global_var, size)?;
         }
         for funcref in self.funcs.iter() {
             let function = self

@@ -234,37 +234,37 @@ impl Val {
             },
             values::BinaryOp::Lt => {
                 match (lhs, rhs) {
-                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Bool(val1 < val2)),
+                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 < val2) as i32)),
                     _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Gt => {
                 match (lhs, rhs) {
-                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Bool(val1 > val2)),
+                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 > val2) as i32)),
                     _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Le => {
                 match (lhs, rhs) {
-                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Bool(val1 <= val2)),
+                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 <= val2) as i32)),
                     _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Ge => {
                 match (lhs, rhs) {
-                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Bool(val1 >= val2)),
+                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 >= val2) as i32)),
                     _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Eq => {
                 match (lhs, rhs) {
-                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Bool(val1 == val2)),
+                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 == val2) as i32)),
                     _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             },
             values::BinaryOp::Ne => {
                 match (lhs, rhs) {
-                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Bool(val1 != val2)),
+                    (Val::Integer(val1), Val::Integer(val2)) => Ok(Val::Integer((val1 != val2) as i32)),
                     _ => Err(ExecutionError::UnexpectedIncompatibleVal(lhs.clone()))
                 }
             }
