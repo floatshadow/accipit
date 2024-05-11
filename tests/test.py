@@ -102,7 +102,7 @@ def run_one_test(compiler: str, test: Test, lab: str, local: bool) -> TestResult
     
     def run_with_ir(compiler: str, test: Test) -> TestResult:  # lab3
         if not local:
-            ir_file = NamedTemporaryFile(suffix=".ll")
+            ir_file = NamedTemporaryFile(suffix=".acc")
             ir_file_name = ir_file.name
         else:
             ir_file_name = test.filename.replace(

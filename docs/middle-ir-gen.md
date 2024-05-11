@@ -959,6 +959,26 @@ $ accipit examples/factorial.acc
 - 实现翻译函数 `translate_expr` 和 `translate_stmt` 的功能，即从前端的一棵 `Node` 类型的语法树，转换到 `Module`-`Function`-`BasicBlock`-`Instruction` 的 Accipit IR 层级结构.
 - 实现在结构化控制流 If 和 While 中条件表达式短路语义的翻译.
 
+你的编译器必须支持两个命令行参数的情形, 即：
+
+```bash
+./compiler <input_file> <output_file>
+```
+
+该程序必须接受一个输入的源代码文件名、 一个输出的 IR 文本文件名作为参数，我们只会使用这种方式来测试你的编译器. 
+
+### 测试
+
+运行以下命令来测试你的编译器：
+
+```bash
+python3 test.py ./compiler lab3
+```
+
+- `--executor_path=<path>` 指定解释器路径，默认为 `../target/debug/accipit`
+- `--local` 指定将测试样例生成的 IR 文本生成在当前目录的子目录 `ir/` 下 
+
+
 ## C++ 模板代码说明
 
 请从 [ZJU Git](https://git.zju.edu.cn/accsys/accsys-cmake-template) 处获取模板代码，并阅读相关说明.
