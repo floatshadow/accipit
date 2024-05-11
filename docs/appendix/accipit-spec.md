@@ -137,13 +137,15 @@ terminator     ::= <jmp> | <br> | <ret>
 #### Binary Instructions
 
 ```
-binop     ::=  'add' | 'sub' | 'mul' | 'div' | 'mod' |
+binop     ::=  'add' | 'sub' | 'mul' | 'div' | 'rem' |
                'and' | 'or' | 'xor' |
                'lt' | 'gt' | 'le' | 'ge' | 'eq' | 'ne'
 binexpr   ::=  <binop> <value> ',' <value>
 ```
 
 ##### 说明
+
+`rem` 意为 remainder，表示取余数操作.
 
 数值计算指令操作符中不包含单目运算符，例如 lnot (logic not) 和 neg (numeric negation)，因为他们是多余的：
 
