@@ -41,6 +41,12 @@
 - 基于约束的分配 (constraint-based, 1996 Goodwin; 2001 Appel; 2002 Scholz)，例如整数线性规划.
 - 分区布尔二次编程寄存器分配 (PBQP)
 
+最朴素的寄存器分配方法当然是把几乎所有临时变量都存储在内存中，也就是栈上.
+每翻译一条中间代码之前我们把要用到的变量先加载到寄存器中，得到计算结果后又将结果写回内存.
+这种方法的确能将中间代码翻译成可以正常运行的目标代码，而且实现和调试都特别容易.
+不难发现，我们当前中端 IR 已经是这种形式了，源代码中的局部变量都是位于栈上的取地址变量（address taken variable），所有 IR 中的顶层变量，也即虚拟寄存器，都是计算的中间结果.
+这门课的主要目的不在代码优化，而是首先保证功能正确性，因此我们只要求你实现朴素寄存器分配即可.
+
 ### 优化寄存器分配需要考虑的问题
 
 想要写一个“正确”的寄存器分配相对容易，但是写一个足够好的寄存器分配比较难。
@@ -65,3 +71,18 @@
     上面提到的这些问题你可以“摆烂”，往最坏的情况估计——假设全部寄存器 spill，假设所有立即数都大到必须使用 `li` 先加载到寄存器等等，这当然是是可以的.
 
 一种可能的解决的方法是，一个抽象的结构代替栈上的地址，例如给需要存在在栈上所有的“物体”编号，这样就可以使用“物体”编号加上单个“物体”内偏移量的二元组编码，等到指令选择结束后再统一把这个编码翻译成底层的 `sp/fp` 加上偏移量的方式
+
+## RISC-V 汇编
+
+Venus 模拟器在伪指令等部分细节层面和 RISC-V 标准存在出入，我们要求你按照 GNU assembler 的语法输出汇编，详细可以参考这本手册 [RISC-V Assembly Programmer's Manual](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md)
+
+你可以使用 [Compiler Explorer](https://godbolt.org/) 选择 RISC-V 编译器来学习生成的汇编格式，我们为你提供了一个[样例](https://godbolt.org/z/9aYKdjK6n)
+
+### 运行
+
+我们将会使用 clang 和 lld 交叉编译生成的 RISC-V 汇编并和我们提供的 runtime 链接得到一个可执行文件，并在 QEMU 上运行：
+
+```bash
+$ clang  -nostdlib -nostdinc -static -target riscv64-unknown-linux-elf -march=rv64im -mabi=lp64 -fuse-ld=lld <output_asm.S> -o <output_executable> -L<path_to_sysy_runtime_lib> -lsysy
+$ qemu-riscv64-static <output_executable> < <test_input>
+```

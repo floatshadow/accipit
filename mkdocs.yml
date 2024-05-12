@@ -36,6 +36,7 @@ nav:
   - Lab 1 词法与语法分析: syntax.md
   - Lab 2 语义分析: semantics.md
   - Lab 3 中间代码生成: middle-ir-gen.md
+  - Lab 4 后端代码生成（草稿）: backend.md
   - 附录:
     - appendix/index.md
     - SysY 语言规范: appendix/sysy-spec.md
