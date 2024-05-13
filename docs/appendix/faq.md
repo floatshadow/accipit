@@ -18,6 +18,10 @@ int main(int argc, char **argv) {
 }
 ```
 
+## 为什么在 Debug 模式下 ASAN 提示我 yylex 存在内存泄漏
+
+请调用 `yylex_destroy` 销毁 buffer.
+
 ## 为什么 Accipit IR 有 `alloca` 指令但是没有 `free`
 
 Accipit IR 的定位是平台无关的中间代码，在**显式**地表达前端语义的同时，在一些形式又接近底层的汇编（例如控制流跳转，指令的操作码等）.
