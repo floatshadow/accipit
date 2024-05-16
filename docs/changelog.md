@@ -6,6 +6,10 @@ h2:before {
 
 # 更新日志
 
+## 2024-5-16
+
+- While 语句的翻译规则中 `entry_bb` 部分有误 [commit#8f4e74f3](https://git.zju.edu.cn/accsys/accipit/-/commit/8f4e74f3e91d6e043e4622da6cec77cae2afd541)
+
 ## 2024-5-12
 
 - IR 规范、解释器和标准编译器三者的取余数计算的指令操作码不一致，现统一为 `rem` [accipit commit#a00d4167](https://git.zju.edu.cn/accsys/accipit/-/commit/a00d4167ff29a099362a222ab1f1aa74840fb377) 和 [accsys-cmake-template commit#fa7a4e28](https://git.zju.edu.cn/accsys/accsys-cmake-template/-/commit/fa7a4e2867849131b7e336ee778bc8b6ba1dbedf)
