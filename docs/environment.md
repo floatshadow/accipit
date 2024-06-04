@@ -79,7 +79,7 @@ make test
 ```
 对于 riscv:
 ```bash
-make NO_LIBC=1 ADD_CFLAGS="-target riscv64-unknown-linux-elf -march=rv64im -mabi=lp64" test
+make NO_LIBC=1 ADD_CFLAGS="-fno-stack-protector -target riscv64-unknown-linux-elf -march=rv64im -mabi=lp64" test
 qemu-riscv64-static ./build/test < test/test.in
 ```
 你应当会看到类似如下输出
