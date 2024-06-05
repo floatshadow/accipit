@@ -667,8 +667,8 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>array_type <span class="op">=</span> lookup_var_type<span class="op">(</span>sym_table<span class="op">,</span> ID<span class="op">);</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>elem_type <span class="op">=</span> get_elem_type<span class="op">(</span>array_type<span class="op">);</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">// address of the first element in the array,</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// which is accutally the stack address represented</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">// by a &#39;alloca&#39; instruction.</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// which is actually the stack address represented</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">// by a &#39;alloca&#39; instruction or a global variable.</span></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>addr_value <span class="op">=</span> lookup<span class="op">(</span>sym_table<span class="op">,</span> ID<span class="op">);</span></span>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">// indices</span></span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>indices <span class="op">=</span> <span class="op">[];</span></span>
@@ -677,12 +677,12 @@ class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">// bounds</span></span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>bounds <span class="op">=</span> get_bounds<span class="op">(</span>array_type<span class="op">);</span></span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_offset<span class="op">(</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> create_load<span class="op">(<span class="op">create_offset<span class="op">(</span></span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  elem_type<span class="op">,</span></span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  addr_value<span class="op">,</span></span>
 <span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  indices<span class="op">,</span></span>
 <span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  bounds</span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code></pre></div></td>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="op">)<span class="op">);</span></span></code></pre></div></td>
 </tr>
 </tbody>
 </table>
@@ -705,6 +705,8 @@ void insert_instruction(Instruction *inst, BasicBlock *block) {
     即便如此，双端链表的访问效率仍然是个问题，这在 JIT 编译器中是一个减分项. 为此， WebKit B3 JIT compiler 就将后端模块中原来的 LLVM IR 换成了新的 B3 IR，B3 IR 就使用数组存储，为了满足在 B3 IR 层级上进行代码优化的需要，编译器引入了一个 `InsertionSet` 数据结构.
     它记录优化 Pass 中所有的变化，并在最后进行统一插入更新，以提高效率.
     如果你对此感兴趣，可以阅读 [WebKit Blog](https://webkit.org/blog/5852/introducing-the-b3-jit-compiler/)
+
+需要注意的是，Expr 对应的是右值，也即实际的值，所以需要一条 load 指令；LVal 对应的是左值，以某个地址/指针类型的 Value 表示，不需要一条额外的 load 指令.
 
 ### 语句生成
 
