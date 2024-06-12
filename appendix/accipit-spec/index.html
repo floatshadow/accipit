@@ -1,0 +1,1346 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://accsys.pages.zjusct.io/accipit/appendix/accipit-spec/">
+      
+      
+        <link rel="prev" href="../sysy-runtime/">
+      
+      
+        <link rel="next" href="../quads2ssa/">
+      
+      
+      <link rel="icon" href="../../images/accsys.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.26">
+    
+    
+      
+        <title>Accipit IR 规范 - 浙江大学编译原理课程实验</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6543a935.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://cdn.tonycrane.cc/utils/katex.min.css">
+    
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:500,500i,600,600i&display=fallback">
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#accipit-ir-specification" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="浙江大学编译原理课程实验" class="md-header__button md-logo" aria-label="浙江大学编译原理课程实验" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            浙江大学编译原理课程实验
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Accipit IR 规范
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://git.zju.edu.cn/accsys/accipit" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    accsys/accipit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="浙江大学编译原理课程实验" class="md-nav__button md-logo" aria-label="浙江大学编译原理课程实验" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    浙江大学编译原理课程实验
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://git.zju.edu.cn/accsys/accipit" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    accsys/accipit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    主页
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    更新日志
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../environment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 0 环境配置
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../syntax/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 1 词法与语法分析
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../semantics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 2 语义分析
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../middle-ir-gen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 3 中间代码生成
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../backend/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 4 后端代码生成（草稿）
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    附录
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            附录
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sysy-spec/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 语言规范
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sysy-runtime/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 运行时库
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Accipit IR 规范
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Accipit IR 规范
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conventions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Conventions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#grammar-notations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Grammar Notations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-symbols" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Symbols
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Structures
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Structures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instructions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instructions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#binary-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Binary Instructions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory Instructions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      Offset
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-call-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Function Call Instructions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#terminator-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Terminator Instructions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Functions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#globals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Globals
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acknowledgement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Acknowledgement
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quads2ssa/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    从四元组到静态单赋值形式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sysy-accipit-mapping/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 结构与 Accipit IR 的对应
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conventions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Conventions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#grammar-notations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Grammar Notations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-symbols" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Symbols
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Structures
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Structures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instructions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instructions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#binary-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Binary Instructions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory Instructions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      Offset
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-call-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Function Call Instructions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#terminator-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Terminator Instructions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Functions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#globals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Globals
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acknowledgement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Acknowledgement
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="accipit-ir-specification">Accipit IR Specification<a class="headerlink" href="#accipit-ir-specification" title="Permanent link">&para;</a></h1>
+<h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
+<p>Accipit IR 的语法和结构由抽象语法定义.</p>
+<p><strong>注意：</strong> 一般情况下，你的任务并不会涉及 parse Accipit IR，本文档的主要目的是让你熟悉 Accipit IR 的语法并方便你进行后续的 debug 和 test.</p>
+<h3 id="grammar-notations">Grammar Notations<a class="headerlink" href="#grammar-notations" title="Permanent link">&para;</a></h3>
+<p>以下记号会在定义抽象语法的语法规则时用到：</p>
+<ul>
+<li>产生式写作 <code>sym ::= expr1 | expr2 | ... | exprn</code>，其中 expr 是任意合法的语法表达式.</li>
+<li>引用其他产生式使用尖括号包裹的该产生式对应的符号，例如 <code>&lt;sym&gt;</code>.</li>
+<li>空字符串使用 <code>&lt;empty&gt;</code> 标记.</li>
+<li>字面量的字符或者字符串使用单引号，例如 <code>'a'</code> <code>'string'</code>.</li>
+<li>字面量字符的集合 <code>[ character-set ]</code>，表示匹配集合任意一个且仅一个字符，合法的集合包括：单个字符 <code>'c'</code>；一个范围内的字符 <code>'c1'-'c2'</code> （c1 和 c2 之间的字符，包含两个端点）；两个或多个字符的并 <code>['c1' 'c2' 'c3' ... 'cn']</code>.</li>
+<li><code>expr *</code> 表示 0 个或多个符合 expr 字符串的拼接.</li>
+<li><code>expr +</code> 表示 1 个或多个符合 expr 字符串的拼接.</li>
+<li><code>expr ?</code> 表示 0 个或 1 个符合 expr 字符串的拼接.</li>
+<li><code>expr1 | expr2</code> 表示任何符合 expr1 或者 expr2 的字符串.</li>
+<li><code>{ expr }</code> 表示符合 expr 的字符串.</li>
+<li><code>expr1 expr2</code> 表示两个字符串的拼接，第一个符合 expr1，第二个符合 expr2.</li>
+</ul>
+<p>以及一些高级的函数，他们不难使用上面的表达式定义：</p>
+<ul>
+<li><code>list(expr)</code> 表示 0 个或者多个符合 expr 的字符串拼接.</li>
+<li><code>nonempty_list(expr)</code> 表示 1 个或者多个符合 expr 的字符串拼接.</li>
+<li><code>separated_list(expr, character)</code> 表示 0 个或者多个符合 expr 的字符串，其间以字符 character 分隔. 例如符合 <code>separected_list(expr, ',')</code> 的字符串有： <code>&lt;empty&gt;</code>，<code>expr</code>，<code>expr,expr,expr</code>.</li>
+<li><code>separated_nonempty_list(expr, character)</code> 含义类似 separated_list，但是不允许空字符串 <code>&lt;empty&gt;</code>.</li>
+</ul>
+<p><strong>由于本文档说明按模块划分，所以可能存在部分交叉引用</strong></p>
+<h3 id="common-symbols">Common Symbols<a class="headerlink" href="#common-symbols" title="Permanent link">&para;</a></h3>
+<p>以下的常用的符号在所有章节中都是共享的：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>digit      ::=  [&#39;0&#39;-&#39;9&#39;]
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>letter     ::=  [&#39;a&#39;-&#39;z&#39; &#39;A&#39;-&#39;Z&#39;]
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>ident      ::=  [&#39;%&#39; &#39;#&#39; &#39;@&#39;] [&lt;letter&gt; &#39;-&#39; &#39;_&#39; &#39;.&#39;] [&lt;letter&gt; &lt;digit&gt; &#39;_&#39; &#39;.&#39;]*
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>               | &lt;digit&gt;+
+</code></pre></div>
+<p>digit 定义了数字字符集合.</p>
+<p>letter 定义了字母数字集合，简单起见只包含拉丁字母.</p>
+<p>ident 定义了标识符 (identifier) 集合，你可以理解为 Accipit IR 内部所使用各种不同结构，值的名字.
+具体来说有两种命名习惯：</p>
+<ul>
+<li>带有名称的变量，例如 <code>%foo</code> <code>@DivisionByZero</code> <code>%a.really.long.identifier</code>.</li>
+<li>匿名的变量或者临时变量，通常按出现的顺序使用一个非负整数命名，例如 <code>%12</code> <code>@2</code> <code>%0</code>.</li>
+</ul>
+<p>其中，<code>%</code> <code>#</code> 和 <code>@</code> 前缀用于表示不同作用域的值：</p>
+<ul>
+<li><code>%</code> 前缀用于局部的值，例如指令定义的符号、基本块符号.</li>
+<li><code>#</code> 前缀用于函数的参数符号.</li>
+<li><code>@</code> 前缀用于全局变量和函数符号.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>int_const    ::=  &#39;-&#39;? &lt;digit&gt;+
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>none_const   ::=  &#39;none&#39;
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>unit_const   ::=  &#39;()&#39;
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>const        ::=  &lt;int_const&gt; | &lt;none_const&gt; | &lt;unit_const&gt;
+</code></pre></div>
+<p>除了可以用上述具名或匿名的标识符来引用某个值，Accipit IR 还有常数值.</p>
+<p><code>int_const</code> 定义了 32 位有符号整数常数，我们只考虑普通的十进制整数的文本形式.</p>
+<p><code>none_const</code> 是一个特殊的常数，用于 offset 指令（见下）.</p>
+<p><code>unit_const</code> 是单值类型 <code>()</code> 的常数.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>symbol     ::= &lt;ident&gt;
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>value      ::= &lt;symbol&gt; | &lt;const&gt;
+</code></pre></div>
+<p>符号 (symbol) 包含所有标识符，代表了中间代码中的变量，包括带有名称的和匿名的临时变量.
+而 IR 中合法的值 (value) 既可以是符号，表示对应变量的值；也可以是常数，表示常数本身的值.</p>
+<h2 id="structures">Structures<a class="headerlink" href="#structures" title="Permanent link">&para;</a></h2>
+<p>下面我们定义 Accipit IR 的各个结构.</p>
+<h3 id="types">Types<a class="headerlink" href="#types" title="Permanent link">&para;</a></h3>
+<p>Accipit IR 中的众多实体按类型区分，类型关乎到程序的合法性、执行的过程.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>type    ::=   &#39;i32&#39;
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>            | &#39;()&#39;
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>            | &lt;type&gt; &#39;*&#39;
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>            | &#39;fn&#39; &#39;(&#39; separated_list(&lt;type&gt;, &#39;,&#39;) &#39;)&#39; &#39;-&gt;&#39; &lt;type&gt;
+</code></pre></div>
+<p><code>i32</code>，32 位带符号整数.</p>
+<p>单值类型 <code>()</code>，读作 unit，和 C 语言中的空类型 void 类似.
+<code>()</code> 类型只有一个值 <code>()</code>，并且用于表示没有说明有意义的值可以作为指令的结果、函数的返回值.</p>
+<p>指针类型，由被指的类型 (pointee type) 加上后缀 * 表示.
+例如 <code>i32 *</code> 表示指向 <code>i32</code> 类型的指针类型.</p>
+<p>函数类型，类似于函数声明，例如：</p>
+<ul>
+<li>加法 add，两个 <code>i32</code> 参数，一个 <code>i32</code> 返回值 <code>fn(i32, i32) -&gt; i32</code>.</li>
+<li>读入，无参数，一个 <code>i32</code> 返回值 <code>fn() -&gt; i32</code>.</li>
+<li>输出，一个 <code>i32</code> 参数，无返回值 <code>fn(i32) -&gt; ()</code>.</li>
+<li><code>fn(i32*) -&gt; i32*</code>，接受一个 <code>i32*</code> 参数，返回一个 <code>i32*</code> 类型的返回值.</li>
+</ul>
+<h3 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h3>
+<p>Accipit IR 的代码由一系列指令 (instruction) 组成.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>valuebinding   ::= &#39;let&#39; &lt;symbol&gt; &#39;=&#39; {&lt;binexpr&gt; | &lt;gep&gt; | &lt;fncall&gt; | &lt;alloca&gt; | &lt;load&gt; | &lt;store&gt;}
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>terminator     ::= &lt;jmp&gt; | &lt;br&gt; | &lt;ret&gt;
+</code></pre></div>
+<p>所有的指令具有两种形式：</p>
+<ul>
+<li>value binding，定义一个变量 <code>&lt;symbol&gt;</code>，并给它赋值，即将右侧指令的值赋给左侧 <code>&lt;symbol&gt;</code> 代表的变量.</li>
+<li>terminator，不进行任何赋值，标记基本块的终结，对应控制流的跳转.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">注意</p>
+<p>出于某种神秘的原因，我们规定每个变量只能在定义的时候被赋值一次，也就是说，每条指令左侧的变量 <code>&lt;symbol&gt;</code> 在对应的作用域内要求是<strong>唯一</strong>的，至于为什么，你可以参考<a href="../quads2ssa/">附录：从四元组到静态单赋值形式</a>.
+所以，我们在语法上用 <code>let</code> 来暗示这一点.
+有一些相应的翻译技巧处理源代码出现多次赋值的情况，详细请看<a href="../sysy-accipit-mapping/">附录：SysY 结构与 Accipit IR 的对应</a></p>
+</div>
+<h4 id="binary-instructions">Binary Instructions<a class="headerlink" href="#binary-instructions" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>binop     ::=  &#39;add&#39; | &#39;sub&#39; | &#39;mul&#39; | &#39;div&#39; | &#39;rem&#39; |
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>               &#39;and&#39; | &#39;or&#39; | &#39;xor&#39; |
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>               &#39;lt&#39; | &#39;gt&#39; | &#39;le&#39; | &#39;ge&#39; | &#39;eq&#39; | &#39;ne&#39;
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>binexpr   ::=  &lt;binop&gt; &lt;value&gt; &#39;,&#39; &lt;value&gt;
+</code></pre></div>
+<h5 id="_1">说明<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h5>
+<p><code>rem</code> 意为 remainder，表示取余数操作.</p>
+<p>数值计算指令操作符中不包含单目运算符，例如 lnot (logic not) 和 neg (numeric negation)，因为他们是多余的：</p>
+<ul>
+<li>按位取反，<code>not %src</code> 等价于 <code>xor %src: i32, -1</code>.</li>
+<li>逻辑取反，<code>lnot %src</code> 等价于 <code>eq %src, 0</code>.</li>
+<li>取负数，<code>neg %src</code> 等价于 <code>sub 0, %src</code>.</li>
+</ul>
+<p>这种转换很容易在前端生成中间代码时实现，并且使得这些计算有一个统一的表示形式 (canonical form)，这将有利于后端代码生成.</p>
+<h5 id="_2">类型规则<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h5>
+<p>接受两个 <code>i32</code> 类型操作数，返回一个 <code>i32</code> 类型的值.</p>
+<h4 id="memory-instructions">Memory Instructions<a class="headerlink" href="#memory-instructions" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>alloca ::= &#39;alloca&#39; &lt;type&gt; &#39;,&#39; &lt;int_const&gt;
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>load   ::= &#39;load&#39; &lt;symbol&gt;
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>store  ::= &#39;store&#39; &lt;value&gt; &#39;,&#39; &lt;symbol&gt; 
+</code></pre></div>
+<h5 id="_3">说明<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h5>
+<p>alloca 指令的作用是为局部变量开辟栈空间，并获得一个指向 <code>&lt;type&gt;</code> 类型，长度为 <code>&lt;int_const&gt;</code> 的指针.
+可以理解为，在栈上定义一个数组 <code>&lt;type&gt;[&lt;int_const&gt;]</code>，并获取数组首元素的地址.
+或者类比 C 代码 <code>int *a = (int *)malloc(100 * sizeof(int))</code>， 对应 <code>let %a = alloca i32, 100</code>，只不过 alloca 分配的是栈空间，返回的是栈上的地址.</p>
+<p>load 指令接受一个指针类型 <code>T*</code> 的符号，返回一个 <code>T</code> 类型的值.</p>
+<p>store 指令接受一个类型 <code>T</code> 的值，将其存入一个 <code>T*</code> 类型的符号，并返回 unit 类型的值.</p>
+<h4 id="offset">Offset<a class="headerlink" href="#offset" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>gep  ::=  &#39;offset&#39; &lt;type&gt; &#39;,&#39; &lt;symbol&gt; { &#39;,&#39; &#39;[&#39; &lt;value&gt; &#39;&lt;&#39; {&lt;int_const&gt; | &lt;none_const&gt;} &#39;]&#39; }+
+</code></pre></div>
+<h5 id="_4">说明<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h5>
+<p>offset 指令的语义比较复杂，它是用于计算地址偏移量的，我们也可以将它归为 Memory Instructions.
+在大家比较熟悉的 C 语言中，可能涉及到高维数组、结构体等等寻址比较复杂的结构，这是 offset 尝试解决的问题.</p>
+<p>出于简化考虑，Accipit IR 都使用普通的指针类型表示一维数组和高维数组，数组上的偏移计算使用若干组 size 来标记每个维度上的大小，若干组 index 来标记每个维度上的偏移量：</p>
+<p>offset 指令有一个类型标注，用来表明数组中元素类型；
+一共有 <code>2n + 1</code> 个参数，其中第一个参数是一个指针，表示基地址；
+后 <code>2n</code> 个参数每两个一组， 每一组的形式为 <code>[index &lt; size]</code> 其中 index 表示该维度上的偏移量，size 表示该维度的大小.</p>
+<p>例如 C 语言中声明数组 <code>int g[3][2][5]</code>，获取地址 <code>&amp;g[x][y][z]</code> 时，可以使用 C 代码 <code>(int *)g + x * 2 * 5 + y * 5 + z</code>，对应的 offset 指令为 <code>offset i32, %g.addr, [%x &lt; 3], [%y &lt; 2], [%z &lt; 5]</code>.</p>
+<p>当然，可能会出现高位数组有一维不知道大小或者在单个指针上算偏移的情况，在这种情况下，对应的维度使用 none 标记：</p>
+<ul>
+<li>二维数组 <code>int g[][5]</code> 获取地址 <code>&amp;g[x][y]</code>，可以使用 C 代码 <code>(int *)g + y * 5</code>.
+对应 offset 指令为 <code>offset i32, %g.addr, [%x &lt; none], [%y &lt; 5]</code>.
+其中 <code>%g.addr</code> 是数组首地址对应的 value，<code>%x</code> 和 <code>%y</code> 分别是数组下标 <code>x</code> 和 <code>y</code> 对应的 value.</li>
+<li>单个指针 <code>int *p</code> 获取地址 <code>p + 10</code>，对应 offset 指令为 <code>offset i32, %p, [10 &lt; none]</code>.
+其中，<code>%p</code> 是指针 <code>p</code> 对应的 value，<code>10</code> 是字面量 10 在对应的 value.</li>
+</ul>
+<p>为什么要有 size 这个参数作为一个下标的上界：</p>
+<ul>
+<li><strong>设计的取舍</strong>：为了你方便处理，我们在类型中舍弃了高维数组，因为数组类型在后端代码生成时处理相对比较麻烦，但是在前端处理这些信息相对容易.</li>
+<li><strong>平台无关</strong>：固然可以在前端就计算出相对于基地址的偏移，但是这涉及到后端细节——类型在内存中的大小——不符合中间平台无关代码的初衷.</li>
+<li><strong>错误检查</strong>：方便解释器检查（运行时）下标越界错误.</li>
+</ul>
+<h5 id="_5">类型规则<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h5>
+<p>假设基地址变量 <code>&lt;symbol&gt;</code> 是指针类型 T*，则要求标注的数组中元素类型 <code>&lt;type&gt;</code> 必须为 T.</p>
+<p>假设，有 <code>n</code> 组偏移量和维度 <code>[index_0 &lt; size_0], [index_1 &lt; size_1], ... [index_{n-1} &lt; size_{n-1}]</code>，
+为了保证语义的合法性，所有 index 都必须是整数类型，且要求运行时的值必须为非负整数；所有 size 中只有 <code>size_0</code> 可以为 <code>none</code>，除此之外必须是一个正整数常数.</p>
+<h4 id="function-call-instructions">Function Call Instructions<a class="headerlink" href="#function-call-instructions" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>fncall ::= &#39;call&#39; &lt;symbol&gt; list({&#39;,&#39; &lt;value&gt;})
+</code></pre></div>
+<h5 id="_6">说明<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h5>
+<p>fncall 指令进行函数调用，符号 <code>&lt;symbol&gt;</code> 必须是被调用的函数，后跟一个参数列表.</p>
+<h5 id="_7">类型规则<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h5>
+<p>如果被调用的函数 <code>&lt;symbol&gt;</code> 是 <code>fn(T_1, T_2, ..., T_{n-1}) -&gt; T_0</code> 类型，那么参数列表的参数必须依次为 <code>T_1</code> <code>T_2</code> ... <code>T_{n-1}</code> 类型，这条指令讲返回一个 <code>T_0</code> 类型的值。</p>
+<p>假设 <code>&lt;symbol&gt;</code> 没有参数，即为 <code>fn() -&gt; T</code> 类型，那么可以不写参数列表，即 <code>let %ret = call &lt;symbol&gt;</code>.</p>
+<p>假设 <code>&lt;symbol&gt;</code> 的返回值是 unit，即 <code>fn(T_1, T_2, ...) -&gt; ()</code> 类型，那么返回值也为 unit 类型.</p>
+<h4 id="terminator-instructions">Terminator Instructions<a class="headerlink" href="#terminator-instructions" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>br    ::=  &#39;br&#39; &lt;value&gt; &#39;,&#39; &#39;label&#39; &lt;ident&gt; &#39;,&#39; &#39;label&#39; &lt;ident&gt;
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>jmp   ::=  &#39;jmp&#39; &#39;label&#39; &lt;ident&gt;
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>ret   ::=  &#39;ret&#39; &lt;value&gt; 
+</code></pre></div>
+<h5 id="_8">说明<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h5>
+<p>br 进行条件跳转，接受的 <code>&lt;value&gt;</code> 应当是 <code>i32</code> 类型.
+若为 true，跳转到第一个 <code>&lt;label&gt;</code> 标记的基本块起始处执行；
+若为 false，跳转到第二个 <code>&lt;label&gt;</code> 标记的基本块起始处执行.</p>
+<p>jmp 进行无条件跳转，跳转到 <code>&lt;label&gt;</code> 标记的基本块起始处执行.</p>
+<p>ret 进行函数范围，并将 <code>&lt;value&gt;</code> 作为返回值，返回值的类型应当与函数签名一致.</p>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
+<p>函数是一段连续的指令序列</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>plist ::= separated_list({&lt;ident&gt; &#39;:&#39; &lt;type&gt;}, &#39;,&#39;)
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>fun   ::= &#39;fn&#39; &lt;ident&gt; &#39;(&#39; &lt;plist&gt; &#39;)&#39; &#39;-&gt;&#39; &lt;type&gt; {&#39;;&#39; | &lt;body&gt;}
+</code></pre></div>
+<p>函数包含函数头以及可选的函数体.
+如果没有函数体，则以一个分号 <code>;</code> 结尾，例如 <code>fn getchar() -&gt; i32;</code>.</p>
+<p>函数头以关键字 <code>fn</code> 开头，包含函数命令和参数列表和返回值，参数列表必须显式地标出每个参数的类型.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>body  ::= &#39;{&#39; &lt;bb&gt;+ &#39;}&#39;
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>label ::= &lt;ident&gt; &#39;:&#39;
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>bb    ::= &lt;label&gt; &lt;instr&gt;* &lt;terminator&gt;
+</code></pre></div>
+<p>函数体由一系列基本块 (basic block) 组成，每个基本块有一个标号 (label) 和基本块中的指令序列，其中最后一条指令必须是 terminator.</p>
+<p>下面是一个阶乘函数的例子：
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>fn @factorial(#n: i32) -&gt; i32 {
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>%Lentry:
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    /* Create a stack slot of i32 type as the space of the return value.
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>     * if n equals 1, store `1` to this address, i.e. `return 1`,
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>     * otherwise, do recursive call, i.e. return n * factorial(n - 1).
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>     */
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    let %ret.addr = alloca i32, 1
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    let %cmp = eq #n, 0
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    br %cmp, label %Ltrue, label %Lfalse
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>%Ltrue:
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    let %6 = store 1, %ret.addr
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    jmp label %Lret
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>%Lfalse:
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    let %9 = sub #n, 1
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>    let %res = call @factorial, %9
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>    let %11 = mul %9, %res
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>    let %12 = store %11, %ret.addr
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>    jmp label %Lret
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>%Lret:
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>    let %ret.val = load %ret.addr
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>    ret %ret.val
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>}
+</code></pre></div></p>
+<h3 id="globals">Globals<a class="headerlink" href="#globals" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>global ::= &lt;symbol&gt; &#39;:&#39; &#39;region&#39; &lt;type&gt; &#39;,&#39; &lt;int_const&gt;
+</code></pre></div>
+<h5 id="_9">说明<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h5>
+<p>声明全局变量 <code>&lt;symbol&gt;</code>，变量具有 <code>&lt;type&gt;</code> 类型和 <code>&lt;int_const&gt;</code>.</p>
+<h5 id="_10">类型规则<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h5>
+<p>和 alloca 类似，<code>&lt;type&gt;</code> 是全局变量可存储的元素类型，<code>&lt;symbol&gt;</code> 的类型是对应的指针类型 <code>&lt;type&gt; *</code>.</p>
+<p>例如：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>@a : region i32, 2
+</code></pre></div>
+<p>则 <code>@a</code> 为 <code>i32*</code> 类型，所指向的地址能存放 2 个 <code>i32</code> 类型的元素.</p>
+<h3 id="comments">Comments<a class="headerlink" href="#comments" title="Permanent link">&para;</a></h3>
+<p>Accipit IR 中注释的规范与 C 语言<strong>类似</strong>, 如下:</p>
+<ul>
+<li>单行注释: 以序列 <code>//</code> 开始, 直到换行符结束, 不包括换行符.</li>
+<li>多行注释: 以序列 <code>/*</code> 开始, 直到第一次出现 <code>*/</code> 时结束, 包括结束处 <code>*/</code>.</li>
+</ul>
+<p>为方便起见，我们默认不会出现嵌套注释.</p>
+<h2 id="execution">Execution<a class="headerlink" href="#execution" title="Permanent link">&para;</a></h2>
+<p>TBD</p>
+<h2 id="acknowledgement">Acknowledgement<a class="headerlink" href="#acknowledgement" title="Permanent link">&para;</a></h2>
+<p>IR 的设计参考了以下课程与资料：</p>
+<ul>
+<li><a href="https://pku-minic.github.io/online-doc/#/">北京大学编译原理课程</a> 的 Koopa IR.</li>
+<li><a href="https://llvm.org/docs/LangRef.html">LLVM 项目</a> 的 IR 设计.</li>
+<li><a href="https://github.com/waterlens/syoc">SyOC</a> 的 IR 设计，感谢 @waterlens 的热心帮助.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="页脚" >
+        
+          
+          <a href="../sysy-runtime/" class="md-footer__link md-footer__link--prev" aria-label="上一页: SysY 运行时库">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                上一页
+              </span>
+              <div class="md-ellipsis">
+                SysY 运行时库
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../quads2ssa/" class="md-footer__link md-footer__link--next" aria-label="下一页: 从四元组到静态单赋值形式">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                下一页
+              </span>
+              <div class="md-ellipsis">
+                从四元组到静态单赋值形式
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.annotate", "content.code.copy", "navigation.tracking", "navigation.top", "navigation.footer", "navigation.indexes", "navigation.sections"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      
+        <script src="https://cdn.tonycrane.cc/utils/katex.min.js"></script>
+      
+        <script src="../../javascripts/katex.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1228 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://accsys.pages.zjusct.io/accipit/appendix/sysy-spec/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../sysy-runtime/">
+      
+      
+      <link rel="icon" href="../../images/accsys.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.26">
+    
+    
+      
+        <title>SysY 语言规范 - 浙江大学编译原理课程实验</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6543a935.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://cdn.tonycrane.cc/utils/katex.min.css">
+    
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:500,500i,600,600i&display=fallback">
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sysy" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="浙江大学编译原理课程实验" class="md-header__button md-logo" aria-label="浙江大学编译原理课程实验" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            浙江大学编译原理课程实验
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              SysY 语言规范
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://git.zju.edu.cn/accsys/accipit" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    accsys/accipit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="浙江大学编译原理课程实验" class="md-nav__button md-logo" aria-label="浙江大学编译原理课程实验" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    浙江大学编译原理课程实验
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://git.zju.edu.cn/accsys/accipit" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    accsys/accipit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    主页
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    更新日志
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../environment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 0 环境配置
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../syntax/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 1 词法与语法分析
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../semantics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 2 语义分析
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../middle-ir-gen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 3 中间代码生成
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../backend/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 4 后端代码生成（草稿）
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    附录
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            附录
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    SysY 语言规范
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    SysY 语言规范
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      文法定义
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sysy_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      SysY 语言的终结符特征
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SysY 语言的终结符特征">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      标识符
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      数值常量
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      注释
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      语义约束
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="语义约束">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      编译单元
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      变量定义
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      函数形参与实参
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      函数定义
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      语句块
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      语句
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      左值表达式
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      表达式
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sysy-runtime/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 运行时库
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../accipit-spec/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Accipit IR 规范
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quads2ssa/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    从四元组到静态单赋值形式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sysy-accipit-mapping/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 结构与 Accipit IR 的对应
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      文法定义
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sysy_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      SysY 语言的终结符特征
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SysY 语言的终结符特征">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      标识符
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      数值常量
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      注释
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      语义约束
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="语义约束">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      编译单元
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      变量定义
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      函数形参与实参
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      函数定义
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      语句块
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      语句
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      左值表达式
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      表达式
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="sysy">SysY 语言规范<a class="headerlink" href="#sysy" title="Permanent link">&para;</a></h1>
+<p>SysY语言是<a href="https://compiler.educg.net/#/">全国大学生计算机系统能力大赛</a>中编译系统设计赛要实现的编程语言.</p>
+<p>你可以在<a href="https://gitlab.eduxiji.net/nscscc/compiler2023/-/blob/master/SysY2022%E8%AF%AD%E8%A8%80%E5%AE%9A%E4%B9%89-V1.pdf">这里</a>找到正式的 SysY 的文法和语义约束.
+本实验所使用的 SysY 语言和官方定义略有不同. <strong>我们对SysY语言做了一些修改</strong>, 具体如下: </p>
+<ul>
+<li>删除了 <code>float</code> 类型, 即不需要实现浮点数类型. </li>
+<li>删除了 <code>ConstDecl</code>，即不需要实现常量声明。同时数组仅支持整数字面量声明维度。</li>
+<li>删除了 <code>InitVal</code> 的嵌套, 即不需要实现数组的初始化.</li>
+<li>删除了十进制之外的整数字面量.</li>
+</ul>
+<h2 id="_1">文法定义<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>SysY 语言的文法采用扩展的 Backus 范式 (EBNF, Extended Backus-Naur Form) 表示, 其中:</p>
+<ul>
+<li>符号 <code>[...]</code> 表示方括号内包含的项可被重复 0 次或 1 次.</li>
+<li>符号 <code>{...}</code> 表示花括号内包含的项可被重复 0 次或多次.</li>
+<li>终结符是由双引号括起的串, 或者是 <code>IDENT</code>, <code>INT_CONST</code> 这样的大写记号. 其余均为非终结符.</li>
+</ul>
+<p>SysY 语言的文法表示如下, <code>CompUnit</code> 为开始符号:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">CompUnit      </span><span class="err">::</span><span class="o">=</span> <span class="p">[</span><span class="k">CompUnit</span><span class="p">]</span> <span class="p">(</span><span class="k">Decl </span><span class="p">|</span> <span class="k">FuncDef</span><span class="p">);</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">BType         </span><span class="err">::</span><span class="o">=</span> <span class="s2">&quot;int&quot;</span><span class="p">;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">Decl          </span><span class="err">::</span><span class="o">=</span> <span class="k">VarDecl</span><span class="p">;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">VarDecl       </span><span class="err">::</span><span class="o">=</span> <span class="k">BType VarDef </span><span class="p">{</span><span class="s2">&quot;,&quot;</span> <span class="k">VarDef</span><span class="p">}</span> <span class="s2">&quot;;&quot;</span><span class="p">;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">VarDef        </span><span class="err">::</span><span class="o">=</span> <span class="k">IDENT </span><span class="s2">&quot;=&quot;</span> <span class="k">InitVal</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                <span class="p">|</span> <span class="k">IDENT </span><span class="p">{</span><span class="s2">&quot;[&quot;</span> <span class="k">INT_CONST </span><span class="s2">&quot;]&quot;</span><span class="p">};</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="k">InitVal       </span><span class="err">::</span><span class="o">=</span> <span class="k">Exp</span><span class="p">;</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="k">FuncDef       </span><span class="err">::</span><span class="o">=</span> <span class="k">FuncType IDENT </span><span class="s2">&quot;(&quot;</span> <span class="p">[</span><span class="k">FuncFParams</span><span class="p">]</span> <span class="s2">&quot;)&quot;</span> <span class="k">Block</span><span class="p">;</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="k">FuncType      </span><span class="err">::</span><span class="o">=</span> <span class="s2">&quot;void&quot;</span> <span class="p">|</span> <span class="s2">&quot;int&quot;</span><span class="p">;</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="k">FuncFParams   </span><span class="err">::</span><span class="o">=</span> <span class="k">FuncFParam </span><span class="p">{</span><span class="s2">&quot;,&quot;</span> <span class="k">FuncFParam</span><span class="p">};</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="k">FuncFParam    </span><span class="err">::</span><span class="o">=</span> <span class="k">BType IDENT </span><span class="p">[</span><span class="s2">&quot;[&quot;</span> <span class="s2">&quot;]&quot;</span> <span class="p">{</span><span class="s2">&quot;[&quot;</span> <span class="k">INT_CONST </span><span class="s2">&quot;]&quot;</span><span class="p">}];</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="k">Block         </span><span class="err">::</span><span class="o">=</span> <span class="s2">&quot;{&quot;</span> <span class="p">{</span><span class="k">BlockItem</span><span class="p">}</span> <span class="s2">&quot;}&quot;</span><span class="p">;</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">BlockItem     </span><span class="err">::</span><span class="o">=</span> <span class="k">Decl </span><span class="p">|</span> <span class="k">Stmt</span><span class="p">;</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="k">Stmt          </span><span class="err">::</span><span class="o">=</span> <span class="k">LVal </span><span class="s2">&quot;=&quot;</span> <span class="k">Exp </span><span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                <span class="p">|</span> <span class="k">Exp </span><span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                <span class="p">|</span> <span class="k">Block</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                <span class="p">|</span> <span class="s2">&quot;if&quot;</span> <span class="s2">&quot;(&quot;</span> <span class="k">Exp </span><span class="s2">&quot;)&quot;</span> <span class="k">Stmt </span><span class="p">[</span><span class="s2">&quot;else&quot;</span> <span class="k">Stmt</span><span class="p">]</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>                <span class="p">|</span> <span class="s2">&quot;while&quot;</span> <span class="s2">&quot;(&quot;</span> <span class="k">Exp </span><span class="s2">&quot;)&quot;</span> <span class="k">Stmt</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>                <span class="p">|</span> <span class="s2">&quot;break&quot;</span> <span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                <span class="p">|</span> <span class="s2">&quot;continue&quot;</span> <span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                <span class="p">|</span> <span class="s2">&quot;return&quot;</span> <span class="p">[</span><span class="k">Exp</span><span class="p">]</span> <span class="s2">&quot;;&quot;</span><span class="p">;</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="k">Exp           </span><span class="err">::</span><span class="o">=</span> <span class="k">LOrExp</span><span class="p">;</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="k">LVal          </span><span class="err">::</span><span class="o">=</span> <span class="k">IDENT </span><span class="p">{</span><span class="s2">&quot;[&quot;</span> <span class="k">Exp </span><span class="s2">&quot;]&quot;</span><span class="p">};</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="k">PrimaryExp    </span><span class="err">::</span><span class="o">=</span> <span class="s2">&quot;(&quot;</span> <span class="k">Exp </span><span class="s2">&quot;)&quot;</span> <span class="p">|</span> <span class="k">LVal </span><span class="p">|</span> <span class="k">Number</span><span class="p">;</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="k">Number        </span><span class="err">::</span><span class="o">=</span> <span class="k">INT_CONST</span><span class="p">;</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="k">UnaryExp      </span><span class="err">::</span><span class="o">=</span> <span class="k">PrimaryExp </span><span class="p">|</span> <span class="k">IDENT </span><span class="s2">&quot;(&quot;</span> <span class="p">[</span><span class="k">FuncRParams</span><span class="p">]</span> <span class="s2">&quot;)&quot;</span> <span class="p">|</span> <span class="k">UnaryOp UnaryExp</span><span class="p">;</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="k">UnaryOp       </span><span class="err">::</span><span class="o">=</span> <span class="s2">&quot;+&quot;</span> <span class="p">|</span> <span class="s2">&quot;-&quot;</span> <span class="p">|</span> <span class="s2">&quot;!&quot;</span><span class="p">;</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="k">FuncRParams   </span><span class="err">::</span><span class="o">=</span> <span class="k">Exp </span><span class="p">{</span><span class="s2">&quot;,&quot;</span> <span class="k">Exp</span><span class="p">};</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="k">MulExp        </span><span class="err">::</span><span class="o">=</span> <span class="k">UnaryExp </span><span class="p">|</span> <span class="k">MulExp </span><span class="p">(</span><span class="s2">&quot;*&quot;</span> <span class="p">|</span> <span class="s2">&quot;/&quot;</span> <span class="p">|</span> <span class="s2">&quot;%&quot;</span><span class="p">)</span> <span class="k">UnaryExp</span><span class="p">;</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="k">AddExp        </span><span class="err">::</span><span class="o">=</span> <span class="k">MulExp </span><span class="p">|</span> <span class="k">AddExp </span><span class="p">(</span><span class="s2">&quot;+&quot;</span> <span class="p">|</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span> <span class="k">MulExp</span><span class="p">;</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="k">RelExp        </span><span class="err">::</span><span class="o">=</span> <span class="k">AddExp </span><span class="p">|</span> <span class="k">RelExp </span><span class="p">(</span><span class="s2">&quot;&lt;&quot;</span> <span class="p">|</span> <span class="s2">&quot;&gt;&quot;</span> <span class="p">|</span> <span class="s2">&quot;&lt;=&quot;</span> <span class="p">|</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">)</span> <span class="k">AddExp</span><span class="p">;</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="k">EqExp         </span><span class="err">::</span><span class="o">=</span> <span class="k">RelExp </span><span class="p">|</span> <span class="k">EqExp </span><span class="p">(</span><span class="s2">&quot;==&quot;</span> <span class="p">|</span> <span class="s2">&quot;!=&quot;</span><span class="p">)</span> <span class="k">RelExp</span><span class="p">;</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="k">LAndExp       </span><span class="err">::</span><span class="o">=</span> <span class="k">EqExp </span><span class="p">|</span> <span class="k">LAndExp </span><span class="s2">&quot;&amp;&amp;&quot;</span> <span class="k">EqExp</span><span class="p">;</span>
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="k">LOrExp        </span><span class="err">::</span><span class="o">=</span> <span class="k">LAndExp </span><span class="p">|</span> <span class="k">LOrExp </span><span class="s2">&quot;||&quot;</span> <span class="k">LAndExp</span><span class="p">;</span>
+</code></pre></div>
+<h2 id="sysy_1">SysY 语言的终结符特征<a class="headerlink" href="#sysy_1" title="Permanent link">&para;</a></h2>
+<h3 id="_2">标识符<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>SysY 语言中标识符 <code>IDENT</code> (identifier) 的规范如下:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">identifier </span><span class="err">::</span><span class="o">=</span> <span class="k">identifier-nondigit</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>             <span class="p">|</span> <span class="k">identifier identifier-nondigit</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>             <span class="p">|</span> <span class="k">identifier digit</span><span class="p">;</span>
+</code></pre></div>
+<p>其中, <code>identifier-nondigit</code> 为下划线, 小写英文字母或大写英文字母; <code>digit</code> 为数字 0 到 9.</p>
+<p>关于其他信息, 请参考 <a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1124.pdf">ISO/IEC 9899</a> 第 51 页关于标识符的定义.</p>
+<p>对于同名<strong>标识符</strong>, SysY 中有以下约定:</p>
+<ul>
+<li>全局变量和局部变量的作用域可以重叠, 重叠部分局部变量优先.</li>
+<li>同名局部变量的作用域不能重叠.</li>
+<li>变量名可以和函数名相同 (这里可以将函数视为全局变量).</li>
+<li>变量名不可以和保留字 (keyword) 相同.</li>
+</ul>
+<h3 id="_3">数值常量<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p>SysY 语言中数值常量可以是整型数 <code>INT_CONST</code> (integer-const), 其规范如下:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">integer-const </span><span class="err">::</span><span class="o">=</span> <span class="k">digit </span><span class="p">{</span> <span class="k">digit </span><span class="p">};</span>
+</code></pre></div>
+<p>数值常量的范围为 <span class="arithmatex">\([0, 2^{31} - 1]\)</span>, 不包含负号.</p>
+<h3 id="_4">注释<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<p>SysY 语言中注释的规范与 C 语言一致, 如下:</p>
+<ul>
+<li>单行注释: 以序列 <code>//</code> 开始, 直到换行符结束, 不包括换行符.</li>
+<li>多行注释: 以序列 <code>/*</code> 开始, 直到第一次出现 <code>*/</code> 时结束, 包括结束处 <code>*/</code>.</li>
+</ul>
+<p>关于其他信息, 请参考 <a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1124.pdf">ISO/IEC 9899</a> 第 66 页关于注释的定义.</p>
+<h2 id="_5">语义约束<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<p>下面, 我们进一步给出 SysY 语言的语义约束.</p>
+<h3 id="_6">编译单元<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">CompUnit </span><span class="err">::</span><span class="o">=</span> <span class="p">[</span><span class="k">CompUnit</span><span class="p">]</span> <span class="p">(</span><span class="k">Decl </span><span class="p">|</span> <span class="k">FuncDef</span><span class="p">);</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">Decl </span><span class="err">::</span><span class="o">=</span>  <span class="k">VarDecl</span><span class="p">;</span>
+</code></pre></div>
+<ol>
+<li>一个 SysY 程序由单个文件组成, 文件内容对应 EBNF 表示中的 <code>CompUnit</code>. 在该 <code>CompUnit</code> 中, 必须存在且仅存在一个标识为 <code>main</code>, 无参数, 返回类型为 <code>int</code> 的 <code>FuncDef</code> (函数定义). <code>main</code> 函数是程序的入口点.</li>
+<li><code>CompUnit</code> 的顶层变量/常量声明语句 (对应 <code>Decl</code>), 函数定义 (对应 <code>FuncDef</code>) 都不可以重复定义同名标识符 (<code>IDENT</code>), 即便标识符的类型不同也不允许.</li>
+<li><code>CompUnit</code> 的变量/常量/函数声明的作用域从该声明处开始, 直到文件结尾.</li>
+</ol>
+<h3 id="_7">变量定义<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">VarDef </span><span class="err">::</span><span class="o">=</span> <span class="k">IDENT </span><span class="p">{</span><span class="s2">&quot;[&quot;</span> <span class="k">INT_CONST </span><span class="s2">&quot;]&quot;</span><span class="p">}</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>         <span class="p">|</span> <span class="k">IDENT </span><span class="p">{</span><span class="s2">&quot;[&quot;</span> <span class="k">INT_CONST </span><span class="s2">&quot;]&quot;</span><span class="p">}</span> <span class="s2">&quot;=&quot;</span> <span class="k">InitVal</span><span class="p">;</span>
+</code></pre></div>
+<ol>
+<li><code>VarDef</code> 用于定义变量. 当不含有 <code>=</code> 和初始值时, 其运行时实际初值未定义.</li>
+<li><code>VarDef</code> 的数组维度和各维长度的定义部分不存在时, 表示定义单个变量; 存在时, 表示定义多维数组</li>
+</ol>
+<h3 id="_8">函数形参与实参<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">FuncFParam </span><span class="err">::</span><span class="o">=</span> <span class="k">BType IDENT </span><span class="p">[</span><span class="s2">&quot;[&quot;</span> <span class="s2">&quot;]&quot;</span> <span class="p">{</span><span class="s2">&quot;[&quot;</span> <span class="k">INT_CONST </span><span class="s2">&quot;]&quot;</span><span class="p">}];</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">FuncRParams </span><span class="err">::</span><span class="o">=</span> <span class="k">Exp </span><span class="p">{</span><span class="s2">&quot;,&quot;</span> <span class="k">Exp</span><span class="p">};</span>
+</code></pre></div>
+<ol>
+<li><code>FuncFParam</code> 定义函数的一个形式参数. 当 <code>IDENT</code> 后面的可选部分存在时, 表示定义数组类型的形参.</li>
+<li>当 <code>FuncFParam</code> 为数组时, 其第一维的长度省去 (用方括号 <code>[]</code> 表示), 而后面的各维则需要用表达式指明长度, 其长度必须是常量.</li>
+<li>函数实参的语法是 <code>Exp</code>. 对于 <code>int</code> 或 <code>bool</code> 类型的参数, 遵循按值传递的规则; 对于数组类型的参数, 形参接收的是实参数组的地址, 此后可通过地址间接访问实参数组中的元素.</li>
+<li>对于多维数组, 我们可以传递其中的一部分到形参数组中. 例如, 若存在数组定义 <code>int a[4][3]</code>, 则 <code>a[1]</code> 是包含三个元素的一维数组, <code>a[1]</code> 可以作为实参, 传递给类型为 <code>int[]</code> 的形参.</li>
+</ol>
+<h3 id="_9">函数定义<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">FuncDef </span><span class="err">::</span><span class="o">=</span> <span class="k">FuncType IDENT </span><span class="s2">&quot;(&quot;</span> <span class="p">[</span><span class="k">FuncFParams</span><span class="p">]</span> <span class="s2">&quot;)&quot;</span> <span class="k">Block</span><span class="p">;</span>
+</code></pre></div>
+<ol>
+<li><code>FuncDef</code> 表示函数定义. 其中的 <code>FuncType</code> 指明了函数的返回类型.<ul>
+<li>当返回类型为 <code>int</code> 或 <code>bool</code> 时, 函数内的所有分支都应当含有带有 <code>Exp</code> 的 <code>return</code> 语句. 不含有 <code>return</code> 语句的分支的返回值未定义.</li>
+<li>当返回值类型为 <code>void</code> 时, 函数内只能出现不带返回值的 <code>return</code> 语句.</li>
+</ul>
+</li>
+<li><code>FuncDef</code> 中形参列表 (<code>FuncFParams</code>) 的每个形参声明 (<code>FuncFParam</code>) 用于声明 <code>int</code> 类型的参数, 或者是元素类型为 <code>int</code> 的多维数组. <code>FuncFParam</code> 的语义参见前文.</li>
+</ol>
+<h3 id="_10">语句块<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">Block </span><span class="err">::</span><span class="o">=</span> <span class="s2">&quot;{&quot;</span> <span class="p">{</span><span class="k">BlockItem</span><span class="p">}</span> <span class="s2">&quot;}&quot;</span><span class="p">;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">BlockItem </span><span class="err">::</span><span class="o">=</span> <span class="k">Decl </span><span class="p">|</span> <span class="k">Stmt</span><span class="p">;</span>
+</code></pre></div>
+<ol>
+<li><code>Block</code> 表示语句块. 语句块会创建作用域, 语句块内声明的变量的生存期在该语句块内.</li>
+<li>语句块内可以再次定义与语句块外同名的变量或常量 (通过 <code>Decl</code> 语句), 其作用域从定义处开始到该语句块尾结束, 它覆盖了语句块外的同名变量或常量.</li>
+</ol>
+<h3 id="_11">语句<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">Stmt </span><span class="err">::</span><span class="o">=</span> <span class="k">LVal </span><span class="s2">&quot;=&quot;</span> <span class="k">Exp </span><span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>       <span class="p">|</span> <span class="p">[</span><span class="k">Exp</span><span class="p">]</span> <span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>       <span class="p">|</span> <span class="k">Block</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>       <span class="p">|</span> <span class="s2">&quot;if&quot;</span> <span class="s2">&quot;(&quot;</span> <span class="k">Exp </span><span class="s2">&quot;)&quot;</span> <span class="k">Stmt </span><span class="p">[</span><span class="s2">&quot;else&quot;</span> <span class="k">Stmt</span><span class="p">]</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>       <span class="p">|</span> <span class="s2">&quot;while&quot;</span> <span class="s2">&quot;(&quot;</span> <span class="k">Exp </span><span class="s2">&quot;)&quot;</span> <span class="k">Stmt</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>       <span class="p">|</span> <span class="s2">&quot;break&quot;</span> <span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>       <span class="p">|</span> <span class="s2">&quot;continue&quot;</span> <span class="s2">&quot;;&quot;</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>       <span class="p">|</span> <span class="s2">&quot;return&quot;</span> <span class="p">[</span><span class="k">Exp</span><span class="p">]</span> <span class="s2">&quot;;&quot;</span><span class="p">;</span>
+</code></pre></div>
+<ol>
+<li><code>Stmt</code> 中的 <code>if</code> 型语句遵循就近匹配的原则.</li>
+<li>单个 <code>Exp</code> 可以作为 <code>Stmt</code>. <code>Exp</code> 会被求值, 所求的值会被丢弃.</li>
+</ol>
+<h3 id="_12">左值表达式<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">LVal </span><span class="err">::</span><span class="o">=</span> <span class="k">IDENT </span><span class="p">{</span><span class="s2">&quot;[&quot;</span> <span class="k">Exp </span><span class="s2">&quot;]&quot;</span><span class="p">};</span>
+</code></pre></div>
+<ol>
+<li><code>LVal</code> 表示具有左值的表达式, 可以为变量或者某个数组元素.</li>
+<li>当 <code>LVal</code> 表示数组时, 方括号个数必须和数组变量的维数相同 (即定位到元素). 若 <code>LVal</code> 表示的数组作为数组参数参与函数调用, 则数组的方括号个数可以不与维数相同.</li>
+<li>当 <code>LVal</code> 表示单个变量时, 不能出现后面的方括号.</li>
+</ol>
+<h3 id="_13">表达式<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">Exp </span><span class="err">::</span><span class="o">=</span> <span class="k">LOrExp</span><span class="p">;</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="err">...</span>
+</code></pre></div>
+<ol>
+<li><code>Exp</code> 在 SysY 中代表 <code>int</code> 型表达式. 当 <code>Exp</code> 出现在表示条件判断的位置时 (例如 <code>if</code> 和 <code>while</code>), 表达式值为 0 时为假, 非 0 时为真.</li>
+<li>对于 <code>LOrExp</code>, 当其左右操作数有任意一个非 0 时, 表达式的值为 1, 否则为 0; 对于 <code>LAndExp</code>, 当其左右操作数有任意一个为 0 时, 表达式的值为 0, 否则为 1. 上述两种表达式均满足 C 语言中的短路求值规则.</li>
+<li><code>LVal</code> 必须是当前作用域内, 该 <code>Exp</code> 语句之前曾定义过的变量或常量. 赋值号左边的 <code>LVal</code> 必须是变量.</li>
+<li>函数调用形式是 <code>IDENT "(" FuncRParams ")"</code>, 其中的 <code>FuncRParams</code> 表示实际参数. 实际参数的类型和个数必须与 <code>IDENT</code> 对应的函数定义的形参完全匹配.</li>
+<li>SysY 中算符的优先级与结合性与 C 语言一致, 上一节定义的 SysY 文法中已体现了优先级与结合性的定义.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="页脚" >
+        
+          
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="上一页: 附录">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                上一页
+              </span>
+              <div class="md-ellipsis">
+                附录
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../sysy-runtime/" class="md-footer__link md-footer__link--next" aria-label="下一页: SysY 运行时库">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                下一页
+              </span>
+              <div class="md-ellipsis">
+                SysY 运行时库
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.annotate", "content.code.copy", "navigation.tracking", "navigation.top", "navigation.footer", "navigation.indexes", "navigation.sections"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      
+        <script src="https://cdn.tonycrane.cc/utils/katex.min.js"></script>
+      
+        <script src="../../javascripts/katex.js"></script>
+      
+    
+  </body>
+</html>

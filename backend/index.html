@@ -1,0 +1,983 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://accsys.pages.zjusct.io/accipit/backend/">
+      
+      
+        <link rel="prev" href="../middle-ir-gen/">
+      
+      
+        <link rel="next" href="../appendix/">
+      
+      
+      <link rel="icon" href="../images/accsys.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.26">
+    
+    
+      
+        <title>Lab 4 后端代码生成（草稿） - 浙江大学编译原理课程实验</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6543a935.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://cdn.tonycrane.cc/utils/katex.min.css">
+    
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:500,500i,600,600i&display=fallback">
+    
+      <link rel="stylesheet" href="../css/custom.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#risc-v-64" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href=".." title="浙江大学编译原理课程实验" class="md-header__button md-logo" aria-label="浙江大学编译原理课程实验" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            浙江大学编译原理课程实验
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Lab 4 后端代码生成（草稿）
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://git.zju.edu.cn/accsys/accipit" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    accsys/accipit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="浙江大学编译原理课程实验" class="md-nav__button md-logo" aria-label="浙江大学编译原理课程实验" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    浙江大学编译原理课程实验
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://git.zju.edu.cn/accsys/accipit" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    accsys/accipit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    主页
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    更新日志
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 0 环境配置
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../syntax/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 1 词法与语法分析
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../semantics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 2 语义分析
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../middle-ir-gen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lab 3 中间代码生成
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Lab 4 后端代码生成（草稿）
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Lab 4 后端代码生成（草稿）
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      指令选择
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      寄存器分配
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="寄存器分配">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      优化寄存器分配需要考虑的问题
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      栈帧管理
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risc-v" class="md-nav__link">
+    <span class="md-ellipsis">
+      RISC-V 汇编
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RISC-V 汇编">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      运行
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../appendix/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    附录
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            附录
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/sysy-spec/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 语言规范
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/sysy-runtime/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 运行时库
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/accipit-spec/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Accipit IR 规范
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/quads2ssa/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    从四元组到静态单赋值形式
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/sysy-accipit-mapping/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SysY 结构与 Accipit IR 的对应
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      指令选择
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      寄存器分配
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="寄存器分配">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      优化寄存器分配需要考虑的问题
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      栈帧管理
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risc-v" class="md-nav__link">
+    <span class="md-ellipsis">
+      RISC-V 汇编
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RISC-V 汇编">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      运行
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="risc-v-64">RISC-V 64 汇编生成<a class="headerlink" href="#risc-v-64" title="Permanent link">&para;</a></h1>
+<h2 id="_1">指令选择<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>指令选择是将中间语言转换成汇编或机器代码的过程.</p>
+<p>指令选择需要考虑的问题：</p>
+<ul>
+<li>目标平台的寄存器类型，例如 IR 的整数位宽和目标平台整数寄存器的位宽.
+32 bit 的整数在 64 bit 平台上需要做 extension，64 bit 的整数在 32 bit 平台上可能需要使用 2 个寄存器来模拟，向量寄存器等需要考虑的问题更多.
+<strong>总之，你需要合法化目标平台不支持的数据类型.</strong></li>
+<li>目标平台的指令集操作码，例如 RISC-V 含有大部分 Accipit IR 中二元运算的操作码，但是并没有 <code>offset</code> 这个比较抽象的指针运算指令，你需要分解成一系列基本的二元运算.
+<strong>总之，你需要合法化目标平台不支持的操作码.</strong></li>
+<li>目标平台的指令集格式，例如在 X86 上可以直接使用 <code>mov</code> 指令完成一个 32 bit 立即数赋值；ARM 平台只有 12 bit 立即数，但是带有 4 bit 的 shift，允许编码一部分较大的立即数，否则要么使用类似 <code>movw</code> + <code>movv</code> 的组合移动指令，要么由编译器在合适的地方 (.text 或 .data) 插入立即数符号，并使用 <code>ldr</code> 访问这个立即数的地址；RISC-V 32 同样有这个问题，指令只支持 12 bit 立即数，较大的立即数根据不同的 code model 使用 <code>lui</code> + <code>addi</code>（高 20 bit 与低 12 bit）或者 <code>auipc</code> + <code>addi</code>.
+不过，幸运的是，你总能通过 <code>li</code> 伪指令加载一个立即数，汇编器和链接器会帮你完成剩下的工作.</li>
+<li>寻址方式，例如 RISC-V 的 <code>lw</code> 只支持寄存器 + 12 bit 立即数偏移的形式.</li>
+<li>调用约定与 ABI 等，例如调用约定规定了哪些是 volatile 哪些是 non-volatile 寄存器，栈帧寄存器，程序计数器 (program counter) 等.
+<strong>总之，你需要考虑目标平台的硬件特性和 ABI 等因素.</strong></li>
+<li>指令选择完之后的 "IR" 是什么形式？由于指令选择一般在寄存器分配之前，所以指令选择完成的 "IR" 可以是目标平台的物理寄存器和IR 的虚拟寄存器并存的形式，你还可以构造一些额外的 “伪指令” 以方便你后续的操作.
+此外在优化编译器中还需要根据指令集的延迟、吞吐等信息进行指令重排调度等目标平台相关的优化，这些操作要求这种 "IR" 和中端的 IR 一样能够对指令序列进行快速的变换.</li>
+</ul>
+<p>中端目标无关 IR 的设计对指令选择的算法和实现使用的数据结构也有影响，例如在教材中，树形的 IR 就比较适合树上的模式匹配加动态规划的 "tree covering" 实现；对于 SSA 风格的 IR，由于 use-def 链等信息，可以考虑使用先将 IR 转换为 DAG，然后在 DAG 上做模式匹配的 "DAG covering" 实现.
+在本次实验中，你只需要手工编码，实现最简单的 "macro expansion" 风格的指令选择即可.</p>
+<h2 id="_2">寄存器分配<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>常见的寄存器分配算法，按照：</p>
+<ul>
+<li>不分配，把虚拟寄存器都溢出到栈上.</li>
+<li>局部寄存器分配 (local register allocation).</li>
+<li>图染色寄存器分配 (graph coloring, 1980, Chaitin)，每个变量对应寄存器干涉图上的一个节点，在同一个基本块内同时活跃的
+变量对应得到节点之间连边，表示不能被分配同一个寄存器，然后对图进行 k 染色.
+ 对构造出的图进行k着色，k为空闲寄存器的个数</li>
+<li><a href="https://web.cs.ucla.edu/~palsberg/course/cs132/linearscan.pdf">线性扫描寄存器分配 (linear scan, TOPLAS 1999, Poletto)</a>，首先计算函数中变量的活跃区间，然后线性扫描所有
+活跃区间，并按贪心将寄存器分配给变量.
+优点是仅需线性复杂度，虽然活跃区间相比图染色寄存器分配算法的粒度更粗，但是实验表明其生成的代码质量通常仅略劣于图染色寄存器分配.</li>
+<li>弦图寄存器分配 (chordal graph, 2005, Pereira).</li>
+<li>静态单赋值形式分配 (SSA, 2006, Hack)，基于 SSA 形式的中间代码的干涉图是弦图这个事实.</li>
+<li>基于约束的分配 (constraint-based, 1996 Goodwin; 2001 Appel; 2002 Scholz)，例如整数线性规划.</li>
+<li>分区布尔二次编程寄存器分配 (PBQP)</li>
+</ul>
+<p>最朴素的寄存器分配方法当然是把几乎所有临时变量都存储在内存中，也就是栈上.
+每翻译一条中间代码之前我们把要用到的变量先加载到寄存器中，得到计算结果后又将结果写回内存.
+这种方法的确能将中间代码翻译成可以正常运行的目标代码，而且实现和调试都特别容易.
+不难发现，我们当前中端 IR 已经是这种形式了，源代码中的局部变量都是位于栈上的取地址变量（address taken variable），所有 IR 中的顶层变量，也即虚拟寄存器，都是计算的中间结果.
+这门课的主要目的不在代码优化，而是首先保证功能正确性，因此我们只要求你实现朴素寄存器分配即可.</p>
+<h3 id="_3">优化寄存器分配需要考虑的问题<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p>想要写一个“正确”的寄存器分配相对容易，但是写一个足够好的寄存器分配比较难。</p>
+<h2 id="_4">栈帧管理<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>在指令选择和寄存器分配之后，所有的寄存器都应该是物理寄存器了，但是你可能还得回过头考虑一下 ABI 和寄存器分配产生的 spill 对栈帧的影响，以 RISC-V 举例：</p>
+<ul>
+<li>函数调用，返回值是 <code>a0</code>，参数是 <code>a0</code>-<code>a7</code>，超出的参数需要存在栈上.</li>
+<li>函数的参数是 <code>a0</code>-<code>a7</code>，超出的参数需要从栈上读取.</li>
+<li>函数的调用者 (caller) 需要保存自己用到的 volatile 寄存器 (<code>t0</code>-<code>t6</code>)，调用完成后需要恢复；函数的被调用者需要保护调用者的 non-volatile 寄存器 (<code>s0</code>-<code>s11</code>)，函数进入时需要保存这些寄存器，函数结束前需要恢复这些寄存器.</li>
+<li>栈帧的维护，在 prolog 可能需要保护返回地址 <code>ra</code> 、栈指针 <code>sp</code> 和帧指针 <code>fp</code>，而在 epilog 需要恢复他们.</li>
+<li>我们在 Accipit IR 中临时变量采取了 <code>alloca</code> 的 trick，它们需要一个栈上的位置.</li>
+<li>寄存器分配后 spill 的寄存器，它们需要一个栈上的位置.</li>
+</ul>
+<p>平心而论，上面这些问题贯穿了这整个后端，因此我们并不推荐你对于所有栈空间的寻址在指令选择阶段就直接硬编码成栈指针 <code>sp</code> 加上偏移量的形式，这是因为：</p>
+<ul>
+<li>估计寄存器分配的 spill 情况可能比较困难，不容易提前确定某个栈上的地址距离栈指针的 <code>sp</code> 的偏移量.</li>
+<li>朴素的实现每个函数的栈帧可能很大，以至于大到和 <code>sp</code> 之间的偏移量已经超出了 12 bit 立即数的限制，这个时候你可以考虑使用 <code>fp</code> 加上偏移量的形式.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">注意：</p>
+<p>上面提到的这些问题你可以“摆烂”，往最坏的情况估计——假设全部寄存器 spill，假设所有立即数都大到必须使用 <code>li</code> 先加载到寄存器等等，这当然是是可以的.</p>
+</div>
+<p>一种可能的解决的方法是，一个抽象的结构代替栈上的地址，例如给需要存在在栈上所有的“物体”编号，这样就可以使用“物体”编号加上单个“物体”内偏移量的二元组编码，等到指令选择结束后再统一把这个编码翻译成底层的 <code>sp/fp</code> 加上偏移量的方式</p>
+<h2 id="risc-v">RISC-V 汇编<a class="headerlink" href="#risc-v" title="Permanent link">&para;</a></h2>
+<p>Venus 模拟器在伪指令等部分细节层面和 RISC-V 标准存在出入，我们要求你按照 GNU assembler 的语法输出汇编，详细可以参考这本手册 <a href="https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md">RISC-V Assembly Programmer's Manual</a></p>
+<p>你可以使用 <a href="https://godbolt.org/">Compiler Explorer</a> 选择 RISC-V 编译器来学习生成的汇编格式，我们为你提供了一个<a href="https://godbolt.org/z/9aYKdjK6n">样例</a></p>
+<h3 id="_5">运行<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>我们将会使用 clang 和 lld 交叉编译生成的 RISC-V 汇编并和我们提供的 runtime 链接得到一个可执行文件，并在 QEMU 上运行：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>clang<span class="w">  </span>-nostdlib<span class="w"> </span>-nostdinc<span class="w"> </span>-static<span class="w"> </span>-target<span class="w"> </span>riscv64-unknown-linux-elf<span class="w"> </span>-march<span class="o">=</span>rv64im<span class="w"> </span>-mabi<span class="o">=</span>lp64<span class="w"> </span>-fuse-ld<span class="o">=</span>lld<span class="w"> </span>&lt;output_asm.S&gt;<span class="w"> </span>-o<span class="w"> </span>&lt;output_executable&gt;<span class="w"> </span>-L&lt;path_to_sysy_runtime_lib&gt;<span class="w"> </span>-lsysy
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>$<span class="w"> </span>qemu-riscv64-static<span class="w"> </span>&lt;output_executable&gt;<span class="w"> </span>&lt;<span class="w"> </span>&lt;test_input&gt;
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="页脚" >
+        
+          
+          <a href="../middle-ir-gen/" class="md-footer__link md-footer__link--prev" aria-label="上一页: Lab 3 中间代码生成">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                上一页
+              </span>
+              <div class="md-ellipsis">
+                Lab 3 中间代码生成
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../appendix/" class="md-footer__link md-footer__link--next" aria-label="下一页: 附录">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                下一页
+              </span>
+              <div class="md-ellipsis">
+                附录
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.annotate", "content.code.copy", "navigation.tracking", "navigation.top", "navigation.footer", "navigation.indexes", "navigation.sections"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      
+        <script src="https://cdn.tonycrane.cc/utils/katex.min.js"></script>
+      
+        <script src="../javascripts/katex.js"></script>
+      
+    
+  </body>
+</html>
